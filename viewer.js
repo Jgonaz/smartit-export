@@ -408,7 +408,6 @@
       const box = el('div', 'team-box');
       box.style.setProperty('--tc', TEAM_COLORS[distinct.indexOf(k) % TEAM_COLORS.length]);
       const step = el('div', 'team-step');
-      step.appendChild(el('span', '', `Paso ${i + 1}`));
       if (counts[k] > 1) step.appendChild(Object.assign(el('span', 'team-repeat', `${counts[k]}ª vez`), { title: 'Vuelve a un equipo por el que ya pasó' }));
       if (i === teamSteps.length - 1) step.appendChild(el('span', 'team-now', 'actual'));
       const when = dense ? shortDate(s.date).replace(/\/\d{4}/, '') : shortDate(s.date);
@@ -416,7 +415,8 @@
       meta.appendChild(el('div', '', when)).title = s.date;
       if (s.by) meta.appendChild(el('div', '', `por ${s.by}`)).title = `por ${s.by}`;
       const name = el('div', 'team-name', s.group);
-      box.append(step, name, meta);
+      if (step.childNodes.length) box.appendChild(step); // solo si lleva «2ª vez» o «actual»
+      box.append(name, meta);
       li.appendChild(box);
       ol.appendChild(li);
     });
