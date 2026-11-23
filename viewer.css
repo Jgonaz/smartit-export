@@ -58,9 +58,9 @@ button.btn-outline[disabled] { cursor: progress; opacity: .7; }
 .head-side { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
 .head-top { display: flex; align-items: center; gap: 10px; }
 .settings { position: relative; }
-.settings-btn { width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--btn-line); background: var(--card); color: var(--ink-3); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color .15s, color .15s, border-color .15s; }
+.settings-btn { width: 38px; height: 38px; border-radius: 8px; border: 0; background: transparent; color: var(--ink-3); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color .15s, color .15s, border-color .15s; }
 .settings-btn .ico { width: 18px; height: 18px; transition: transform .35s cubic-bezier(.2,.7,.2,1); }
-.settings-btn:hover, .settings-btn[aria-expanded="true"] { border-color: var(--accent-line); background: var(--accent-bg); color: var(--accent); }
+.settings-btn:hover, .settings-btn[aria-expanded="true"] { background: var(--accent-bg); color: var(--accent); }
 .settings-btn[aria-expanded="true"] .ico { transform: rotate(60deg); }
 .settings-menu { position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; width: 300px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, .18); padding: 14px 16px 16px; text-align: left;
   transform-origin: top right; animation: sie-menu-in .18s cubic-bezier(.2,.7,.2,1); }

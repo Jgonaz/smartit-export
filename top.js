@@ -21,6 +21,12 @@
     #${ICON_ID}{float:left;position:relative;display:flex;align-items:center;justify-content:center;box-sizing:content-box;width:30px;height:20px;padding:10px 6px;margin-top:2px;color:#fff;cursor:pointer;opacity:.9;line-height:0}
     #${ICON_ID}:hover{opacity:1}
     #${ICON_ID}.hidden{display:none}
+    #${ICON_ID}.appear .sie-i-clip{animation:sie-pop ${T(520)}ms cubic-bezier(.2,.9,.25,1.25) both}
+    #${ICON_ID} .sie-splash{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;
+      border:2px solid rgba(255,255,255,.55);opacity:0;pointer-events:none}
+    #${ICON_ID}.appear .sie-splash{animation:sie-splash ${T(700)}ms ease-out ${T(160)}ms both}
+    @keyframes sie-pop{0%{opacity:0;transform:scale(.4) rotate(-12deg)}60%{opacity:1;transform:scale(1.08) rotate(2deg)}100%{opacity:1;transform:none}}
+    @keyframes sie-splash{0%{opacity:.7;transform:scale(.6)}100%{opacity:0;transform:scale(1.6)}}
     #${ICON_ID} .sie-dot{position:absolute;top:4px;right:3px;width:10px;height:10px;border-radius:50%;background:#F5A524;box-shadow:0 0 0 2px #3B3B3B;
       opacity:0;transform:scale(.4);transition:opacity ${T(250)}ms ease, transform ${T(300)}ms cubic-bezier(.2,.7,.2,1);pointer-events:none}
     #${ICON_ID}.has-update .sie-dot{opacity:1;transform:none}
@@ -40,8 +46,8 @@
       transition:opacity ${T(260)}ms ease, transform ${T(320)}ms cubic-bezier(.2,.7,.2,1)}
     #${OVERLAY_ID}.show .sie-status.on{opacity:1;transform:none;transition-delay:${T(120)}ms}
     #${OVERLAY_ID} .sie-spinner{width:44px;height:44px;border-radius:50%;border:3px solid #E4E6EC;border-top-color:#2E44C7;animation:sie-spin .8s linear infinite}
-    #${OVERLAY_ID} .sie-text{min-height:21px;transition:opacity ${T(160)}ms ease}
-    #${OVERLAY_ID} .sie-text.swap{opacity:.35}
+    #${OVERLAY_ID} .sie-text{min-height:21px;transition:opacity ${T(90)}ms ease}
+    #${OVERLAY_ID} .sie-text.swap{opacity:.75}
     #${OVERLAY_ID} .sie-status.err .sie-spinner{display:none}
     #${OVERLAY_ID} .sie-err-ico{display:none;width:44px;height:44px;border-radius:50%;background:#FDECEC;color:#A3261F;font:700 22px/44px system-ui;text-align:center}
     #${OVERLAY_ID} .sie-status.err .sie-err-ico{display:block}
@@ -49,7 +55,7 @@
       transition:opacity ${T(380)}ms ease, transform ${T(420)}ms cubic-bezier(.2,.7,.2,1)}
     #${OVERLAY_ID} iframe.on{opacity:1;transform:none}
     #${OVERLAY_ID}.dark{background:#0F1115}
-    #${OVERLAY_ID}.dark .sie-status{color:#AEB4C2}
+    #${OVERLAY_ID}.dark .sie-status{color:#D3D7E0}
     #${OVERLAY_ID}.dark .sie-spinner{border-color:#262A33;border-top-color:#8B9BFF}
     #${OVERLAY_ID}.dark .sie-err-ico{background:#3A1515;color:#F59A93}
     @keyframes sie-spin{to{transform:rotate(360deg)}}`;
@@ -65,6 +71,10 @@
   } catch (_) { /* sin acceso al almacenamiento: tema claro */ }
   mqDark.addEventListener('change', () => paintTheme());
   function paintTheme() { if (overlay) overlay.classList.toggle('dark', isDark()); }
+
+  // ¿La ficha de la incidencia ha terminado de cargar? Lo avisa content.js desde el iframe.
+  let ticketReady = false;
+  let readySince = 0;      // ignora avisos antiguos justo después de cambiar de incidencia
 
   // Estado: idle (SmartIT visible) | loading (analizando) | open (visor visible)
   let state = 'idle';
@@ -118,7 +128,7 @@
   function setText(t) {
     if (!textEl || textEl.textContent === t) return;
     textEl.classList.add('swap');
-    setTimeout(() => { textEl.textContent = t; textEl.classList.remove('swap'); }, T(120));
+    setTimeout(() => { textEl.textContent = t; textEl.classList.remove('swap'); }, T(80));
   }
 
   function showStatus(t, isError) {
@@ -220,6 +230,12 @@
       if (e.data.sie === 'update-dismissed') checkUpdate();
       return;
     }
+    if (e.data.sie === 'ready' && isOnbmc(e.origin)) {
+      if (Date.now() < readySince) return;
+      const r = !!e.data.ready;
+      if (r !== ticketReady) { ticketReady = r; ensureIcon(); }
+      return;
+    }
     if (!isOnbmc(e.origin) || state !== 'loading') return;
     if (e.data.sie === 'started') clearTimeout(startTimer);
     else if (e.data.sie === 'progress') { clearTimeout(startTimer); setText(e.data.text || 'Analizando incidencia...'); }
@@ -236,6 +252,9 @@
 
   // Si se navega a otra incidencia o sección, se vuelve a SmartIT y se descarta el visor guardado.
   window.addEventListener('hashchange', () => {
+    ticketReady = false;
+    readySince = Date.now() + 600;
+    ensureIcon();
     if (state !== 'idle') close();
     if (cache && cache.hash !== location.hash) { const f = cache.iframe; cache = null; setTimeout(() => f.remove(), T(340)); }
   });
@@ -250,18 +269,28 @@
       a.id = ICON_ID;
       a.setAttribute('role', 'button');
       a.tabIndex = 0;
-      a.innerHTML = SVG_CLIP + SVG_BACK + '<span class="sie-dot" aria-hidden="true"></span>';
+      a.innerHTML = SVG_CLIP + SVG_BACK + '<span class="sie-dot" aria-hidden="true"></span><span class="sie-splash" aria-hidden="true"></span>';
       a.addEventListener('click', onIconClick);
       a.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onIconClick(); } });
       search.parentElement.insertBefore(a, search);
       setIcon(state !== 'idle');
     }
-    // Solo tiene sentido en las vistas de ticket (…PV/<id>).
-    if (a) a.classList.toggle('hidden', !/#\/\w+PV\//.test(location.hash) && state === 'idle');
+    // Solo en vistas de ticket (…PV/<id>) y cuando la ficha ha terminado de cargar (aviso "ready" de content.js),
+    // para que no se pueda pulsar mientras aún carga. Al aparecer, entra con animación.
+    if (a) {
+      const show = state !== 'idle' || (/#\/\w+PV\//.test(location.hash) && ticketReady);
+      const wasHidden = a.classList.contains('hidden');
+      a.classList.toggle('hidden', !show);
+      if (show && wasHidden && state === 'idle') {
+        a.classList.remove('appear');
+        void a.offsetWidth; // reinicia la animación
+        a.classList.add('appear');
+      }
+    }
   }
 
   ensureIcon();
-  setInterval(ensureIcon, 1500);
+  setInterval(ensureIcon, 500);
   checkUpdate();
   setInterval(checkUpdate, 60 * 60 * 1000);
   // Al volver del visor (p. ej. tras ocultar el aviso con la ✕), se refresca el estado.

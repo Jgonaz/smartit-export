@@ -485,7 +485,26 @@
     }
   }
 
+  // Avisa a SmartIT (top.js) de si la ficha está lista: incidencia cargada, página completa y,
+  // si hay actividad, sus notas pintadas. Así el icono no aparece mientras aún carga.
+  function isReady() {
+    if (!isTicket() || document.readyState !== 'complete') return false;
+    const root = findFeedRoot();
+    return !root || iframesReady(root);
+  }
+  let lastReady = null;
+  function reportReady() {
+    if (window.top === window || running) return;
+    const r = isReady();
+    if (r !== lastReady || r) { // se repite mientras está lista, por si SmartIT se perdió el aviso
+      lastReady = r;
+      try { window.parent.postMessage({ sie: 'ready', ready: r }, '*'); } catch (_) {}
+    }
+  }
+
   // La ficha es una SPA (Angular): comprobamos periódicamente si hay incidencia cargada.
   ensureButton();
   setInterval(ensureButton, 1500);
+  reportReady();
+  setInterval(reportReady, 700);
 })();
