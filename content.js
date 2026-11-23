@@ -197,7 +197,7 @@
       for (const f of feedIframes(root)) {
         try {
           const n = readNote(f);
-          if (!byId.has(n.id)) byId.set(n.id, n);
+          if (!byId.has(n.id)) { n.seq = byId.size; byId.set(n.id, n); }
         } catch (e) { console.warn('[SmartIT export] nota ilegible', f.id, e); }
       }
       const next = pagerButton(root, 'right');
@@ -215,7 +215,9 @@
       const m = s.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
       return m ? new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +m[6]).getTime() : 0;
     };
-    const entries = [...byId.values()].sort((a, b) => toTs(a.date) - toTs(b.date));
+    // La actividad viene de la más reciente a la más antigua: a igual fecha, la que se leyó después es anterior.
+    const entries = [...byId.values()].sort((a, b) => (toTs(a.date) - toTs(b.date)) || (b.seq - a.seq));
+    entries.forEach(e => { delete e.seq; });
     return { entries, status, pages: page };
   }
 

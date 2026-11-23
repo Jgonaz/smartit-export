@@ -284,7 +284,8 @@
 
   // ---------- texto ----------
   const indent = (s, pad = '  ') => s.split('\n').join('\n' + pad);
-  function buildText() {
+  // files (opcional): Map adjunto -> ruta relativa dentro del .zip; si existe, se enlaza cada adjunto.
+  function buildText(files) {
     const withSystem = $('opt-system').checked;
     const withFields = $('opt-fields').checked;
     const L = [];
@@ -300,8 +301,11 @@
       L.push('');
     }
     if (showTeams) {
-      L.push(`## Recorrido entre equipos (${bounces} cambios de equipo)`);
-      teamSteps.forEach((s, i) => L.push(`${i + 1}. [${s.date}] ${s.group}${s.by ? ` (por ${s.by})` : ''}`));
+      L.push(`## Recorrido entre equipos (${teamSteps.length} pasos)`);
+      teamSteps.forEach((s, i) => {
+        const tags = [s.reopened && 'reabierta', s.closed && `cerrada: ${s.closedAs}`, i === teamSteps.length - 1 && !s.closed && 'actual'].filter(Boolean);
+        L.push(`${i + 1}. [${s.date}] ${s.group}${s.by ? ` (por ${s.by})` : ''}${tags.length ? ` — ${tags.join(', ')}` : ''}`);
+      });
       L.push('');
     }
     const entries = (data.activity || []).filter(e => withSystem || e.isNote || (e.attachments || []).length);
@@ -317,6 +321,11 @@
       attachments.forEach(a => {
         const where = findMentions(a).map(m => m.label.replace(/^Mencionada en: /, ''));
         L.push(`- ${a.name} (${a.date}, ${a.author})${where.length ? ` — mencionado en: ${where.join('; ')}` : ''}`);
+        if (files) {
+          const f = files.get(a);
+          if (f) L.push(isImage(a) ? `  ![${a.name}](${encodeURI(f)})` : `  [${a.name}](${encodeURI(f)})`);
+          else L.push('  (no incluido: no se pudo cargar)');
+        }
       });
     }
     return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
@@ -365,9 +374,28 @@
     const R_ASSIGNED = /asignad[oa] a:?\s+(.+?)\s+por\s+(.+?)\s*$/im;
     (data.activity || []).forEach(e => { const m = R_CHANGED.exec(textOf(e)); if (m) known.add(m[1].toLowerCase()); });
 
+    // Estados: "Estado marcado: "Resuelto" por …". Cerrada = Resuelto/Cerrado/Cancelado;
+    // un estado abierto después de uno cerrado es una reapertura.
+    const R_STATUS = /estado marcado:?\s*["«“]?([^"»”\n]+?)["»”]?(?:\s+por\s|$)/im;
+    const isClosed = st => /resuelt|cerrad|cancelad/i.test(st);
+    const near = (d1, d2) => Math.abs(toTs(d1) - toTs(d2)) <= 120000;
     const steps = [];
+    let closed = false;
     (data.activity || []).forEach(e => {
       const t = textOf(e);
+      const last = steps[steps.length - 1];
+      const st = R_STATUS.exec(t);
+      if (st && last) {
+        if (isClosed(st[1])) { closed = true; last.closed = true; last.closedAs = st[1].trim(); }
+        else if (closed) {
+          closed = false;
+          // Reapertura: abre un paso nuevo (aunque siga en el mismo equipo), salvo que el paso
+          // actual acabe de empezar (cambio de grupo en el mismo momento), que pasa a ser el reabierto.
+          if (last.date && near(last.date, e.date) && !last.closed) last.reopened = true;
+          else steps.push({ group: last.group, date: e.date, by: '', reopened: true });
+        }
+        return;
+      }
       let group = null, by = '';
       const c = R_CHANGED.exec(t);
       const a = R_ASSIGNED.exec(t);
@@ -378,8 +406,11 @@
         if (known.has(lx) || (!people.has(lx) && GROUP_HINT.test(x))) { group = x; by = a[2]; }
       }
       if (!group) return;
-      const last = steps[steps.length - 1];
-      if (last && last.group.toLowerCase() === group.toLowerCase()) return; // mismo grupo: no es un cambio
+      if (last && last.group.toLowerCase() === group.toLowerCase()) { if (!last.by) last.by = by; return; } // mismo grupo
+      // Reabierta justo antes de pasar a otro equipo: la reapertura pertenece al equipo nuevo.
+      if (last && last.reopened && !last.closed && near(last.date, e.date) && !last.by) {
+        last.group = group; last.by = by; last.date = e.date; return;
+      }
       steps.push({ group, date: e.date, by });
     });
     return steps;
@@ -387,7 +418,8 @@
   const TEAM_COLORS = ['#2E44C7', '#B4532A', '#1F7A6B', '#7A3FB0', '#2B6A9E', '#A3261F', '#6B5A12', '#3D7A2B'];
   const teamSteps = teamPath();
   const bounces = Math.max(0, teamSteps.length - 1);
-  const showTeams = teamSteps.length >= 3; // 3 o más equipos en el recorrido
+  // Se muestra con 3 o más pasos, o si la incidencia se ha reabierto alguna vez.
+  const showTeams = teamSteps.length >= 3 || (teamSteps.length >= 2 && teamSteps.some(s => s.reopened));
 
   function renderTeams() {
     const ol = $('teams');
@@ -411,8 +443,10 @@
       const box = el('div', 'team-box');
       box.style.setProperty('--tc', TEAM_COLORS[distinct.indexOf(k) % TEAM_COLORS.length]);
       const step = el('div', 'team-step');
-      if (counts[k] > 1) step.appendChild(Object.assign(el('span', 'team-repeat', `${counts[k]}ª vez`), { title: 'Vuelve a un equipo por el que ya pasó' }));
-      if (i === teamSteps.length - 1) step.appendChild(el('span', 'team-now', 'actual'));
+      if (s.reopened) step.appendChild(Object.assign(el('span', 'team-reopen', 'reabierta'), { title: 'La incidencia se reabrió en este paso' }));
+      else if (counts[k] > 1) step.appendChild(Object.assign(el('span', 'team-repeat', `${counts[k]}ª vez`), { title: 'Vuelve a un equipo por el que ya pasó' }));
+      if (s.closed) step.appendChild(Object.assign(el('span', 'team-closed', 'cerrada'), { title: `Marcada como «${s.closedAs}» en este paso` }));
+      if (i === teamSteps.length - 1 && !s.closed) step.appendChild(el('span', 'team-now', 'actual'));
       const when = dense ? shortDate(s.date).replace(/\/\d{4}/, '') : shortDate(s.date);
       const meta = el('div', 'team-meta');
       meta.appendChild(el('div', '', when)).title = s.date;
@@ -578,5 +612,82 @@
       $('copy-label').textContent = 'Pulsa aquí para copiar el markdown completo';
       $('toast').hidden = true;
     }, 1800);
+  };
+
+  // ---------- descargar .zip (markdown + adjuntos) ----------
+  // ZIP sin compresión ("store"), suficiente para imágenes ya comprimidas y sin dependencias externas.
+  const CRC_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+    return t;
+  })();
+  const crc32 = bytes => { let c = 0xFFFFFFFF; for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  function makeZip(entries) {
+    const enc = new TextEncoder();
+    const now = new Date();
+    const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    const parts = [], central = [];
+    let offset = 0;
+    for (const { name, data } of entries) {
+      const nameBytes = enc.encode(name);
+      const crc = crc32(data);
+      const local = new DataView(new ArrayBuffer(30));
+      local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true); local.setUint16(6, 0x0800, true); // UTF-8
+      local.setUint16(8, 0, true); local.setUint16(10, dosTime, true); local.setUint16(12, dosDate, true);
+      local.setUint32(14, crc, true); local.setUint32(18, data.length, true); local.setUint32(22, data.length, true);
+      local.setUint16(26, nameBytes.length, true); local.setUint16(28, 0, true);
+      parts.push(new Uint8Array(local.buffer), nameBytes, data);
+      const cd = new DataView(new ArrayBuffer(46));
+      cd.setUint32(0, 0x02014b50, true); cd.setUint16(4, 20, true); cd.setUint16(6, 20, true); cd.setUint16(8, 0x0800, true);
+      cd.setUint16(10, 0, true); cd.setUint16(12, dosTime, true); cd.setUint16(14, dosDate, true);
+      cd.setUint32(16, crc, true); cd.setUint32(20, data.length, true); cd.setUint32(24, data.length, true);
+      cd.setUint16(28, nameBytes.length, true); cd.setUint32(42, offset, true);
+      central.push(new Uint8Array(cd.buffer), nameBytes);
+      offset += 30 + nameBytes.length + data.length;
+    }
+    const cdSize = central.reduce((n, b) => n + b.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
+    end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+    return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+  }
+  const dataUrlBytes = du => { const bin = atob(du.split(',')[1]); const b = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); return b; };
+  const fileSafe = n => n.normalize('NFC').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'archivo';
+
+  $('zip').onclick = async () => {
+    const btn = $('zip');
+    const label = $('zip-label');
+    btn.disabled = true;
+    label.textContent = 'Generando…';
+    try {
+      const id = fileSafe(h.number || 'incidencia');
+      const files = new Map();
+      const used = new Set();
+      const entries = [];
+      attachments.forEach((a, i) => {
+        if (!a.dataUrl) return;
+        let name = fileSafe(a.name);
+        if (used.has(name.toLowerCase())) name = `${i + 1}_${name}`;
+        used.add(name.toLowerCase());
+        files.set(a, `adjuntos/${name}`);
+        entries.push({ name: `${id}/adjuntos/${name}`, data: dataUrlBytes(a.dataUrl) });
+      });
+      entries.unshift({ name: `${id}/incidencia.md`, data: new TextEncoder().encode(buildText(files)) });
+      const url = URL.createObjectURL(makeZip(entries));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${id}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      label.textContent = '¡Descargado!';
+    } catch (err) {
+      console.error('[SmartIT export]', err);
+      label.textContent = 'Error al generar';
+    } finally {
+      setTimeout(() => { label.textContent = 'Descargar .zip'; btn.disabled = false; }, 1800);
+    }
   };
 })();
