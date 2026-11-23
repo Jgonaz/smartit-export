@@ -384,7 +384,7 @@
   const TEAM_COLORS = ['#2E44C7', '#B4532A', '#1F7A6B', '#7A3FB0', '#2B6A9E', '#A3261F', '#6B5A12', '#3D7A2B'];
   const teamSteps = teamPath();
   const bounces = Math.max(0, teamSteps.length - 1);
-  const showTeams = bounces >= 3;
+  const showTeams = teamSteps.length >= 3; // 3 o más equipos en el recorrido
 
   function renderTeams() {
     const ol = $('teams');
