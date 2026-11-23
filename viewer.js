@@ -90,8 +90,8 @@
 
   // ---------- contexto de cada adjunto ----------
   const toTs = s => {
-    const m = (s || '').match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
-    return m ? new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +m[6]).getTime() : 0;
+    const m = (s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    return m ? new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0)).getTime() : 0;
   };
   // Notas automáticas que solo dicen "Attachment for an incident entry - a.png, b.jpg".
   const isGenericBody = (body, names) => {
@@ -421,41 +421,57 @@
   // Se muestra con 3 o más pasos, o si la incidencia se ha reabierto alguna vez.
   const showTeams = teamSteps.length >= 3 || (teamSteps.length >= 2 && teamSteps.some(s => s.reopened));
 
+  // Reparto en filas: hasta 7 pasos en una fila; a partir de 8, el mínimo de filas posible con
+  // como mucho 7 por fila, repartidos a partes iguales (los sobrantes, en las últimas filas).
+  // 8 → 4/4 · 9 → 4/5 · 10 → 5/5 · 14 → 7/7 · 15 → 5/5/5
+  function rowSizes(n) {
+    const rows = Math.max(1, Math.ceil(n / 7));
+    const base = Math.floor(n / rows);
+    const extra = n % rows;
+    return Array.from({ length: rows }, (_, r) => base + (r >= rows - extra ? 1 : 0));
+  }
+
   function renderTeams() {
-    const ol = $('teams');
-    ol.hidden = !showTeams || mode !== 'view';
-    if (!showTeams || ol.childNodes.length) return;
-    const dense = teamSteps.length > 6;
-    ol.classList.toggle('dense', dense);
+    const box = $('teams');
+    box.hidden = !showTeams || mode !== 'view';
+    if (!showTeams || box.childNodes.length) return;
     const distinct = [...new Set(teamSteps.map(s => s.group.toLowerCase()))];
     const counts = {};
-    teamSteps.forEach((s, i) => {
-      const k = s.group.toLowerCase();
-      counts[k] = (counts[k] || 0) + 1;
-      if (i > 0) {
-        // La flecha va entre pasos, fuera de ellos, para que todas las tarjetas midan lo mismo.
-        const arrow = el('li', 'team-arrow');
-        arrow.setAttribute('aria-hidden', 'true');
-        arrow.innerHTML = svg('<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>');
-        ol.appendChild(arrow);
+    const arrowEl = () => {
+      const arrow = el('li', 'team-arrow');
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.innerHTML = svg('<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>');
+      return arrow;
+    };
+    let i = 0;
+    rowSizes(teamSteps.length).forEach((size, r) => {
+      const ol = el('ol', 'teams-row');
+      ol.classList.toggle('dense', size > 6);
+      for (let j = 0; j < size; j++, i++) {
+        const s = teamSteps[i];
+        // La flecha va entre pasos (y al empezar cada fila siguiente, para que se lea como continuación).
+        if (j > 0 || r > 0) ol.appendChild(arrowEl());
+        const k = s.group.toLowerCase();
+        counts[k] = (counts[k] || 0) + 1;
+        const li = el('li', 'team');
+        const card = el('div', 'team-box');
+        card.style.setProperty('--tc', TEAM_COLORS[distinct.indexOf(k) % TEAM_COLORS.length]);
+        const step = el('div', 'team-step');
+        if (s.reopened) step.appendChild(Object.assign(el('span', 'team-reopen', 'reabierta'), { title: 'La incidencia se reabrió en este paso' }));
+        else if (counts[k] > 1) step.appendChild(Object.assign(el('span', 'team-repeat', `${counts[k]}ª vez`), { title: 'Vuelve a un equipo por el que ya pasó' }));
+        if (s.closed) step.appendChild(Object.assign(el('span', 'team-closed', 'cerrada'), { title: `Marcada como «${s.closedAs}» en este paso` }));
+        if (i === teamSteps.length - 1 && !s.closed) step.appendChild(el('span', 'team-now', 'actual'));
+        const dense = size > 6;
+        const when = dense ? shortDate(s.date).replace(/\/\d{4}/, '') : shortDate(s.date);
+        const meta = el('div', 'team-meta');
+        meta.appendChild(el('div', '', when)).title = s.date;
+        if (s.by) meta.appendChild(el('div', '', `por ${s.by}`)).title = `por ${s.by}`;
+        if (step.childNodes.length) card.appendChild(step); // solo si lleva alguna etiqueta
+        card.append(el('div', 'team-name', s.group), meta);
+        li.appendChild(card);
+        ol.appendChild(li);
       }
-      const li = el('li', 'team');
-      const box = el('div', 'team-box');
-      box.style.setProperty('--tc', TEAM_COLORS[distinct.indexOf(k) % TEAM_COLORS.length]);
-      const step = el('div', 'team-step');
-      if (s.reopened) step.appendChild(Object.assign(el('span', 'team-reopen', 'reabierta'), { title: 'La incidencia se reabrió en este paso' }));
-      else if (counts[k] > 1) step.appendChild(Object.assign(el('span', 'team-repeat', `${counts[k]}ª vez`), { title: 'Vuelve a un equipo por el que ya pasó' }));
-      if (s.closed) step.appendChild(Object.assign(el('span', 'team-closed', 'cerrada'), { title: `Marcada como «${s.closedAs}» en este paso` }));
-      if (i === teamSteps.length - 1 && !s.closed) step.appendChild(el('span', 'team-now', 'actual'));
-      const when = dense ? shortDate(s.date).replace(/\/\d{4}/, '') : shortDate(s.date);
-      const meta = el('div', 'team-meta');
-      meta.appendChild(el('div', '', when)).title = s.date;
-      if (s.by) meta.appendChild(el('div', '', `por ${s.by}`)).title = `por ${s.by}`;
-      const name = el('div', 'team-name', s.group);
-      if (step.childNodes.length) box.appendChild(step); // solo si lleva «2ª vez» o «actual»
-      box.append(name, meta);
-      li.appendChild(box);
-      ol.appendChild(li);
+      box.appendChild(ol);
     });
   }
 

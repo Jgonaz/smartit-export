@@ -191,8 +191,15 @@
 
     const byId = new Map();
     let page = 1;
+    // "Registros desde 1 hasta 15 de 110" -> 8 páginas.
+    const totalPages = (() => {
+      const m = feedStatus(root).match(/(\d+)\D+(\d+)\D+(\d+)\s*$/);
+      if (!m) return 0;
+      const size = +m[2] - +m[1] + 1;
+      return size > 0 ? Math.ceil(+m[3] / size) : 0;
+    })();
     for (let guard = 0; guard < 200; guard++) {
-      onProgress && onProgress(`Analizando incidencia: página ${page}...`);
+      onProgress && onProgress(`Analizando incidencia: página ${page}${totalPages ? '/' + totalPages : ''}...`);
       await waitFor(() => iframesReady(root), 15000);
       for (const f of feedIframes(root)) {
         try {
@@ -212,8 +219,8 @@
     await goToPage1(root); // deja la actividad como estaba
 
     const toTs = s => {
-      const m = s.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
-      return m ? new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +m[6]).getTime() : 0;
+      const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+      return m ? new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0)).getTime() : 0;
     };
     // La actividad viene de la más reciente a la más antigua: a igual fecha, la que se leyó después es anterior.
     const entries = [...byId.values()].sort((a, b) => (toTs(a.date) - toTs(b.date)) || (b.seq - a.seq));
