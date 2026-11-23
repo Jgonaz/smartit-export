@@ -9,7 +9,7 @@
   const data = store[key];
   if (!data) {
     $('title').textContent = 'No hay datos para mostrar';
-    $('meta').textContent = 'Vuelve a pulsar el icono de exportar en SmartIT.';
+    $('lede').textContent = 'Vuelve a pulsar el icono de exportar en SmartIT.';
     return;
   }
 
@@ -24,28 +24,15 @@
   const ICON = {
     image: svg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 15l5-4 4 3 3-2 6 4"/>'),
     clip: svg('<path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6a3.3 3.3 0 0 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 0 1-2.4-2.4l7.9-7.9"/>'),
-    lines: svg('<path d="M4 6h16M4 12h10M4 18h7"/>'),
-    info: svg('<path d="M12 11v6"/><path d="M12 7.5v.01"/>'),
     file: svg('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>')
   };
+  const shortDate = s => (s || '').replace(/:\d{2}$/, '');
+  const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const MON = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
   document.title = `${h.number || 'Incidencia'} – ${h.summary || ''}`;
-  if (h.number) { $('number').textContent = h.number; $('number').hidden = false; }
+  $('number').textContent = h.number || '';
   $('title').textContent = h.summary || h.number || 'Incidencia';
-  try {
-    const d = new Date(data.exportedAt);
-    $('exported').textContent = `SmartIT · Exportación del ${d.toLocaleDateString('es-ES')} ${d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
-  } catch (_) {}
-  const shortDate = s => (s || '').replace(/:\d{2}$/, '');
-  const statusClass = s => /resuel|cerrad|completad/i.test(s) ? 'b-green'
-    : /cancel/i.test(s) ? 'b-gray' : /pendient|espera/i.test(s) ? 'b-amber' : 'b-blue';
-  const prioClass = p => /cr[ií]tic|alta|urgent/i.test(p) ? 'b-red' : /media/i.test(p) ? 'b-amber' : 'b-gray';
-  const meta = $('meta');
-  const addSep = () => { if (meta.childNodes.length) meta.appendChild(el('span', 'sep', '•')); };
-  if (h.status) { const b = el('span', 'badge ' + statusClass(h.status)); b.appendChild(el('span', 'dot')); b.append(h.status); meta.appendChild(b); }
-  if (h.priority) meta.appendChild(el('span', 'badge ' + prioClass(h.priority), `Prioridad ${h.priority.toLowerCase()}`));
-  if (h.created) { addSep(); meta.appendChild(el('span', '', `Creada ${shortDate(h.created)}`)); }
-  if (h.modified) { addSep(); meta.appendChild(el('span', '', `Actualizada ${shortDate(h.modified)}`)); }
   if (data.sourceUrl) { $('source').href = data.sourceUrl; $('source').hidden = false; }
 
   // ---------- adjuntos ----------
@@ -53,11 +40,6 @@
   const attachments = [];
   (data.activity || []).forEach(e => (e.attachments || []).forEach(a =>
     attachments.push({ ...a, date: e.date, author: e.author, entry: e })));
-  $('att-count').textContent = attachments.length;
-  $('att-empty').hidden = attachments.length > 0;
-  $('carousel').hidden = attachments.length === 0;
-  document.querySelector('.att-nav').hidden = attachments.length < 4;
-
   // data: URL -> blob: URL (Chrome no deja abrir data: en una pestaña nueva).
   const dataUrlToBlobUrl = du => {
     const [head, b64] = du.split(',');
@@ -68,19 +50,11 @@
     return URL.createObjectURL(new Blob([bytes], { type: mime }));
   };
   attachments.forEach(a => { if (a.dataUrl) a.url = dataUrlToBlobUrl(a.dataUrl); });
-
   const isImage = a => IMG_EXT.test(a.name) || /^image\//.test(a.mime || '');
   // Imagen completa si se pudo descargar; si no, la miniatura que da SmartIT.
   const imgSrc = a => (isImage(a) && (a.url || a.iconSrc)) || '';
-  const failed = attachments.filter(a => a.error);
-  if (failed.length) {
-    $('att-notice').hidden = false;
-    $('att-notice').textContent = `No se pudieron cargar ${failed.length} adjunto(s): ${failed.map(a => a.name).join(', ')}. ` +
-      'Se muestra la miniatura cuando existe; ábrelos desde SmartIT.';
-  }
 
-  const carousel = $('carousel');
-  // ---------- tooltip de origen ----------
+  // ---------- recuadro ⓘ: de dónde sale cada archivo ----------
   const pop = document.createElement('div');
   pop.className = 'origin-pop';
   pop.hidden = true;
@@ -198,53 +172,6 @@
     if (!pop.hidden && !pop.contains(ev.target) && !ev.target.closest('.info-btn')) { pop.hidden = true; popFor = null; }
   });
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { pop.hidden = true; popFor = null; } });
-  carousel.addEventListener('scroll', () => { pop.hidden = true; popFor = null; });
-
-  // Resumen corto del contexto para la tarjeta.
-  function contextSummary(a) {
-    const ctx = attachmentContext(a);
-    if (!ctx.length) return '';
-    const c = ctx[0].label;
-    if (c.startsWith('Comentario')) return 'Comentario de la nota';
-    if (c.includes('Descripción')) return 'Mencionado en la descripción';
-    if (c.startsWith('Mencionada')) return 'Mencionado en otra nota';
-    return 'Nota del mismo momento';
-  }
-
-  attachments.forEach((a, i) => {
-    const tile = el('div', 'tile');
-    const src = imgSrc(a);
-    const view = el('button', 'tile-img' + (src ? '' : ' file'));
-    view.type = 'button';
-    view.setAttribute('aria-label', (src ? 'Ver ' : 'Abrir ') + a.name);
-    if (src) {
-      const img = el('img'); img.alt = ''; img.src = src; view.appendChild(img);
-    } else {
-      view.innerHTML = ICON.file;
-      const ext = (a.name.split('.').pop() || '?').toUpperCase().slice(0, 5);
-      view.appendChild(el('span', 'ext', a.url ? `${ext} · se abre en pestaña nueva` : ext));
-    }
-    view.addEventListener('click', () => openModal(i));
-    const info = el('button', 'info-btn');
-    info.type = 'button';
-    info.title = '¿De dónde sale este archivo?';
-    info.setAttribute('aria-label', `Origen de ${a.name}`);
-    info.innerHTML = ICON.info;
-    info.addEventListener('click', ev => { ev.stopPropagation(); showOrigin(a, info); });
-    const m = el('div', 'tile-meta');
-    m.appendChild(el('div', 'tile-name', a.name)).title = a.name;
-    m.appendChild(el('div', 'tile-sub', `${shortDate(a.date)} · ${a.author}`));
-    const cs = contextSummary(a);
-    const ctx = el('div', 'tile-ctx' + (cs ? '' : ' none'));
-    ctx.innerHTML = ICON.lines;
-    ctx.append(cs || 'Sin comentario asociado');
-    m.appendChild(ctx);
-    if (a.error) m.appendChild(el('div', 'tile-warn', 'Solo miniatura (no se pudo cargar)'));
-    tile.append(view, info, m);
-    carousel.appendChild(tile);
-  });
-  $('car-prev').onclick = () => carousel.scrollBy({ left: -carousel.clientWidth * 0.8 });
-  $('car-next').onclick = () => carousel.scrollBy({ left: carousel.clientWidth * 0.8 });
 
   // ---------- modal ----------
   let current = -1;
@@ -304,7 +231,7 @@
       data.fields.forEach(f => L.push(`- ${f.label}: ${indent(f.value)}`));
       L.push('');
     }
-    if (showTeams) {
+    if (teamSteps.length >= 2) {
       L.push(`## Recorrido entre equipos (${teamSteps.length} pasos)`);
       teamSteps.forEach((s, i) => {
         const tags = [s.reopened && 'reabierta', s.closed && `cerrada: ${s.closedAs}`, i === teamSteps.length - 1 && !s.closed && 'actual'].filter(Boolean);
@@ -334,11 +261,6 @@
     }
     return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
   }
-  // ---------- vista formateada ----------
-  const COLORS = ['#2E44C7', '#B4532A', '#1F7A6B', '#7A3FB0', '#A3261F', '#2B6A9E', '#6B5A12', '#3D7A2B'];
-  const colorFor = name => { let x = 0; for (const c of name || '') x = (x * 31 + c.charCodeAt(0)) >>> 0; return COLORS[x % COLORS.length]; };
-  const initials = name => (name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
-
   // Texto con las menciones a adjuntos convertidas en etiquetas pulsables.
   const mentionList = attachments.flatMap((a, i) => {
     const stem = a.name.replace(/\.[^.]+$/, '');
@@ -368,6 +290,7 @@
   // Grupos de soporte por los que ha pasado la incidencia, en orden, a partir de la actividad:
   // "El Grupo de soporte ha cambiado a: X" y "Asignado a X por Y" (cuando X es un grupo, no una persona).
   const GROUP_HINT = /^(soporte|support|equipo|grupo|mesa|cau|service ?desk|help ?desk|nivel|n[123]\b|l[123]\b|sistemas|operaciones|desarrollo|plataforma|infraestructura|redes|seguridad|comunicaciones|aplicaciones|explotaci)/i;
+  const groupEvents = new Map(); // entrada de la actividad -> grupo al que pasa
   function teamPath() {
     const known = new Set();
     (data.fields || []).filter(f => /^grupo de soporte$/i.test(f.label)).forEach(f => known.add(f.value.trim().toLowerCase()));
@@ -410,6 +333,7 @@
         if (known.has(lx) || (!people.has(lx) && GROUP_HINT.test(x))) { group = x; by = a[2]; }
       }
       if (!group) return;
+      groupEvents.set(e, group);
       if (last && last.group.toLowerCase() === group.toLowerCase()) { if (!last.by) last.by = by; return; } // mismo grupo
       // Reabierta justo antes de pasar a otro equipo: la reapertura pertenece al equipo nuevo.
       if (last && last.reopened && !last.closed && near(last.date, e.date) && !last.by) {
@@ -419,69 +343,7 @@
     });
     return steps;
   }
-  const TEAM_COLORS = ['#2E44C7', '#B4532A', '#1F7A6B', '#7A3FB0', '#2B6A9E', '#A3261F', '#6B5A12', '#3D7A2B'];
   const teamSteps = teamPath();
-  const bounces = Math.max(0, teamSteps.length - 1);
-  // Se muestra con 3 o más pasos, o si la incidencia se ha reabierto alguna vez.
-  const showTeams = teamSteps.length >= 3 || (teamSteps.length >= 2 && teamSteps.some(s => s.reopened));
-
-  // Reparto en filas: hasta 7 pasos en una fila; a partir de 8, el mínimo de filas posible con
-  // como mucho 7 por fila, repartidos a partes iguales (los sobrantes, en las primeras filas).
-  // 8 → 4/4 · 9 → 5/4 · 10 → 5/5 · 14 → 7/7 · 15 → 5/5/5 · 16 → 6/5/5
-  function rowSizes(n) {
-    const rows = Math.max(1, Math.ceil(n / 7));
-    const base = Math.floor(n / rows);
-    const extra = n % rows;
-    return Array.from({ length: rows }, (_, r) => base + (r < extra ? 1 : 0));
-  }
-
-  function renderTeams() {
-    const box = $('teams');
-    box.hidden = !showTeams || mode !== 'view';
-    if (!showTeams || box.childNodes.length) return;
-    const distinct = [...new Set(teamSteps.map(s => s.group.toLowerCase()))];
-    const counts = {};
-    const arrowEl = () => {
-      const arrow = el('li', 'team-arrow');
-      arrow.setAttribute('aria-hidden', 'true');
-      arrow.innerHTML = svg('<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>');
-      return arrow;
-    };
-    let i = 0;
-    const sizes = rowSizes(teamSteps.length);
-    const cols = sizes[0];
-    // Todas las tarjetas miden lo mismo (el ancho de la fila más larga); las filas cortas van centradas.
-    box.style.setProperty('--cols', cols);
-    box.classList.toggle('dense', cols > 6);
-    sizes.forEach((size, r) => {
-      const ol = el('ol', 'teams-row');
-      for (let j = 0; j < size; j++, i++) {
-        const s = teamSteps[i];
-        // La flecha va entre pasos (y al empezar cada fila siguiente, para que se lea como continuación).
-        if (j > 0 || r > 0) ol.appendChild(arrowEl());
-        const k = s.group.toLowerCase();
-        counts[k] = (counts[k] || 0) + 1;
-        const li = el('li', 'team');
-        const card = el('div', 'team-box');
-        card.style.setProperty('--tc', `var(--team-${distinct.indexOf(k) % 8})`); // colores por tema (claro/oscuro)
-        const step = el('div', 'team-step');
-        if (s.reopened) step.appendChild(Object.assign(el('span', 'team-reopen', 'reabierta'), { title: 'La incidencia se reabrió en este paso' }));
-        else if (counts[k] > 1) step.appendChild(Object.assign(el('span', 'team-repeat', `${counts[k]}ª vez`), { title: 'Vuelve a un equipo por el que ya pasó' }));
-        if (s.closed) step.appendChild(Object.assign(el('span', 'team-closed', 'cerrada'), { title: `Marcada como «${s.closedAs}» en este paso` }));
-        if (i === teamSteps.length - 1 && !s.closed) step.appendChild(el('span', 'team-now', 'actual'));
-        const dense = cols > 6;
-        const when = dense ? shortDate(s.date).replace(/\/\d{4}/, '') : shortDate(s.date);
-        const meta = el('div', 'team-meta');
-        meta.appendChild(el('div', '', when)).title = s.date;
-        if (s.by) meta.appendChild(el('div', '', `por ${s.by}`)).title = `por ${s.by}`;
-        if (step.childNodes.length) card.appendChild(step); // solo si lleva alguna etiqueta
-        card.append(el('div', 'team-name', s.group), meta);
-        li.appendChild(card);
-        ol.appendChild(li);
-      }
-      box.appendChild(ol);
-    });
-  }
 
   // Previsualización de un adjunto (imagen) que abre la vista a pantalla completa.
   function previewEl(i, size) {
@@ -538,88 +400,293 @@
     });
   }
 
-  function renderSummary() {
-    const sm = data.summary;
-    if (!sm || !sm.markdown) return;
-    $('summary-card').hidden = false;
-    $('summary-meta').textContent = ['Generado', sm.by && `por ${sm.by}`, sm.date && `el ${sm.date}`].filter(Boolean).join(' ');
-    const box = $('summary');
-    renderMiniMarkdown(box, sm.markdown);
+
+  // ---------- tiempos ----------
+  const DAY = 86400000, HOUR = 3600000, MIN = 60000;
+  function fmtDur(ms, long) {
+    if (ms < MIN) return long ? 'menos de 1 min' : '<1 min';
+    const d = Math.floor(ms / DAY), hh = Math.floor((ms % DAY) / HOUR), mm = Math.floor((ms % HOUR) / MIN);
+    if (long) {
+      if (d) return `${d} ${d === 1 ? 'día' : 'días'}${hh ? ` y ${hh} h` : ''}`;
+      if (hh) return `${hh} h${mm ? ` y ${mm} min` : ''}`;
+      return `${mm} min`;
+    }
+    if (d) return `${d} d${hh ? ` ${hh} h` : ''}`;
+    if (hh) return `${hh} h${mm ? ` ${mm} min` : ''}`;
+    return `${mm} min`;
+  }
+  const dayMonth = s => { const m = (s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/); return m ? `${+m[1]} ${MON[+m[2] - 1]}, ${m[4].padStart(2, '0')}:${m[5]}` : s; };
+  const longDay = s => { const m = (s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? `${+m[1]} de ${MONTHS[+m[2] - 1]}` : ''; };
+  const isClosedStatus = st => /resuelt|cerrad|cancelad|completad/i.test(st || '');
+  const closedNow = isClosedStatus(h.status);
+  const R_STATUS = /estado marcado:?\s*["«“]?([^"»”\n]+?)["»”]?(?:\s+por\s|$)/im;
+  const textOfEntry = e => [e.type, e.action, e.body].filter(Boolean).join('\n');
+  const activity = data.activity || [];
+  const startTs = toTs(h.created) || (activity[0] && toTs(activity[0].date)) || 0;
+  // Fin: si está cerrada, el último cierre; si no, el momento de la exportación.
+  let endTs = Date.parse(data.exportedAt) || Date.now();
+  if (closedNow) {
+    const lastClose = [...activity].reverse().find(e => { const m = R_STATUS.exec(textOfEntry(e)); return m && isClosedStatus(m[1]); });
+    if (lastClose) endTs = toTs(lastClose.date) || endTs;
+  }
+  const GAP_MIN = 2 * HOUR; // un hueco de más de 2 h cuenta como tiempo sin actividad
+
+  // ---------- colores por equipo ----------
+  const teamKeys = [...new Set(teamSteps.map(s => s.group.toLowerCase()))];
+  const teamColor = g => `var(--t${Math.max(0, teamKeys.indexOf((g || '').toLowerCase())) % 8})`;
+  const stepAt = ts => { let s = null; for (const st of teamSteps) { if (toTs(st.date) <= ts) s = st; else break; } return s; };
+
+  // ---------- cabecera: frase de resumen ----------
+  (() => {
+    const parts = [];
+    const st = (h.status || '').trim();
+    let first = st ? st.charAt(0).toUpperCase() + st.slice(1).toLowerCase() : '';
+    const since = longDay(h.created);
+    if (since) first += first ? (closedNow ? `, abierta el ${since}` : ` desde el ${since}`) : `Abierta el ${since}`;
+    if (h.priority) first += `${first ? ', ' : ''}prioridad ${h.priority.toLowerCase()}`;
+    if (first) parts.push(first + '.');
+    if (teamSteps.length >= 2) {
+      const n = teamKeys.length;
+      const reopen = teamSteps.filter(s => s.reopened).length;
+      const NUM = ['cero', 'un', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez'];
+      let s = `Ha pasado por ${NUM[n] || n} equipos`;
+      if (reopen) s += ` y se reabrió ${reopen === 1 ? 'una vez' : `${NUM[reopen] || reopen} veces`}`;
+      parts.push(s + '.');
+    }
+    $('lede').textContent = parts.join(' ');
+  })();
+
+  // ---------- metro ----------
+  function rowSizes(n) {
+    const rows = Math.max(1, Math.ceil(n / 7));
+    const base = Math.floor(n / rows);
+    const extra = n % rows;
+    return Array.from({ length: rows }, (_, r) => base + (r < extra ? 1 : 0));
+  }
+  function renderMetro() {
+    if (!teamSteps.length) return;
+    $('metro-card').hidden = false;
+    const box = $('metro');
+    box.className = 'metro' + (Math.max(...rowSizes(teamSteps.length)) > 6 ? ' dense' : '');
+    const durs = teamSteps.map((s, i) => (i < teamSteps.length - 1 ? toTs(teamSteps[i + 1].date) : endTs) - toTs(s.date));
+    const longest = teamSteps.length > 1 ? durs.slice(0, -1).indexOf(Math.max(...durs.slice(0, -1))) : -1;
+    let i = 0;
+    rowSizes(teamSteps.length).forEach(size => {
+      const row = el('div', 'metro-row');
+      const pos = j => size === 1 ? 50 : 7 + j * (86 / (size - 1));
+      const start = i;
+      for (let j = 0; j < size - 1; j++) {
+        const s = teamSteps[start + j];
+        const seg = el('div', 'm-seg' + (j === 0 ? ' first' : '') + (j === size - 2 ? ' last' : ''));
+        seg.style.left = `calc(${pos(j)}% - ${j === 0 ? 6 : 0}px)`;
+        seg.style.width = `calc(${pos(j + 1) - pos(j)}% + ${(j === 0 ? 6 : 0) + (j === size - 2 ? 6 : 0)}px)`;
+        seg.style.background = teamColor(s.group);
+        row.appendChild(seg);
+        const d = el('div', 'm-dur' + (start + j === longest ? ' long' : ''), fmtDur(Math.max(0, durs[start + j])));
+        d.style.left = `${(pos(j) + pos(j + 1)) / 2}%`;
+        row.appendChild(d);
+      }
+      for (let j = 0; j < size; j++, i++) {
+        const s = teamSteps[i];
+        const isNow = i === teamSteps.length - 1 && !closedNow;
+        const st = el('div', 'm-st' + (isNow ? ' now' : ''));
+        st.style.left = `${pos(j)}%`;
+        st.appendChild(el('div', 'm-name', s.group));
+        const dot = el('div', 'm-dot');
+        if (s.closed || isNow) dot.style.background = teamColor(s.group);
+        st.appendChild(dot);
+        st.appendChild(el('div', 'm-date', dayMonth(s.date)));
+        if (s.by) st.appendChild(el('div', 'm-by', s.by)).title = s.by;
+        const tags = el('div', 'm-tags');
+        if (s.reopened) tags.appendChild(el('span', 'm-tag', 'Reabierta'));
+        if (s.closed) tags.appendChild(el('span', 'm-tag', /resuelt/i.test(s.closedAs) ? 'Resuelta aquí' : /cancel/i.test(s.closedAs) ? 'Cancelada aquí' : 'Cerrada aquí'));
+        if (isNow) tags.appendChild(el('span', 'm-tag now', 'Está aquí'));
+        if (tags.childNodes.length) st.appendChild(tags);
+        row.appendChild(st);
+      }
+      box.appendChild(row);
+    });
   }
 
-  function renderDescription() {
-    const box = $('desc');
-    box.textContent = '';
-    const text = (data.description || '').trim();
-    $('desc-card').hidden = !text;
-    text.split(/\n{2,}/).forEach(par => {
+  // ---------- conversación ----------
+  const custNames = new Set((data.fields || []).filter(f => /^(cliente|contacto)$/i.test(f.label)).map(f => f.value.trim().toLowerCase()));
+  const isCustomer = e => /cliente|client|customer/i.test(e.type || '') || custNames.has((e.author || '').trim().toLowerCase());
+
+  function bubbleContent(target, text) {
+    (text || '').trim().split(/\n{2,}/).forEach(par => {
       const i = soleMention(par);
       const pv = i >= 0 ? previewEl(i, 'lg') : null;
-      if (pv) { const d = el('div'); d.appendChild(pv); box.appendChild(d); return; }
-      const p = el('p'); richText(p, par.trim()); box.appendChild(p);
+      if (pv) { const d = el('div'); d.appendChild(pv); target.appendChild(d); return; }
+      const p = el('p'); richText(p, par.trim()); target.appendChild(p);
     });
   }
 
-  function renderTimeline() {
+  function renderChat() {
     const withSystem = $('opt-system').checked;
-    const entries = (data.activity || []).filter(e => withSystem || e.isNote || (e.attachments || []).length);
-    $('act-count').textContent = `${entries.length} entradas · de la más antigua a la más reciente`;
-    const ol = $('timeline');
-    ol.textContent = '';
-    entries.forEach(e => {
-      const li = el('li', 'tl-item');
-      const rail = el('div', 'tl-rail');
-      const body = el('div', 'tl-body');
-      const isNote = e.isNote || (e.attachments || []).length;
-      if (isNote) {
-        const av = el('span', 'avatar', initials(e.author));
-        av.style.background = colorFor(e.author);
-        av.setAttribute('aria-hidden', 'true');
-        rail.appendChild(av);
-        const card = el('div', 'note');
-        const head = el('div', 'note-head');
-        const who = el('div', 'note-who');
-        who.appendChild(el('span', 'note-author', e.author || 'Sistema'));
-        if (e.type) who.appendChild(el('span', 'tag', e.type));
-        if (e.access) who.appendChild(el('span', 'tag ' + (/p[uú]blic/i.test(e.access) ? 'pub' : 'priv'), e.access));
-        head.append(who, el('time', '', shortDate(e.date)));
-        card.appendChild(head);
-        // Las notas automáticas tipo "Attachment for an incident entry - a.png…" no aportan: ya se ven las previsualizaciones.
-        const generic = (e.attachments || []).length && isGenericBody(e.body, e.attachments.map(x => x.name));
-        if (e.body && !generic) { const p = el('p', 'note-text'); richText(p, e.body); card.appendChild(p); }
-        if ((e.attachments || []).length) {
-          const thumbs = el('div', 'thumbs');
-          const files = el('div', 'files');
-          e.attachments.forEach(at => {
-            const idx = attachments.findIndex(x => x.entry === e && x.slot === at.slot);
-            const pv = idx >= 0 ? previewEl(idx, 'sm') : null;
-            if (pv) { thumbs.appendChild(pv); return; }
-            const chip = el('button', 'file-chip');
-            chip.type = 'button';
-            chip.innerHTML = ICON.clip;
-            chip.append(at.name);
-            chip.addEventListener('click', () => idx >= 0 && openModal(idx));
-            files.appendChild(chip);
-          });
-          if (thumbs.childNodes.length) card.appendChild(thumbs);
-          if (files.childNodes.length) card.appendChild(files);
-        }
-        body.appendChild(card);
-      } else {
-        const dot = el('span', 'ev-dot'); dot.appendChild(el('span')); dot.setAttribute('aria-hidden', 'true');
-        rail.appendChild(dot);
-        const row = el('div', 'ev-row');
-        const txt = [e.type, e.action, e.body].filter(Boolean).join(' · ') || '(evento)';
-        row.append(el('span', 'ev-text', txt), el('time', '', shortDate(e.date)));
-        body.appendChild(row);
+    const chat = $('chat');
+    chat.textContent = '';
+    const add = node => { const li = el('li'); li.appendChild(node); chat.appendChild(li); };
+    let prevTs = 0;
+    const gapBefore = ts => {
+      if (prevTs && ts && ts - prevTs >= GAP_MIN) {
+        const g = el('div', 'gap'); g.appendChild(el('span', '', `${fmtDur(ts - prevTs, true)} sin actividad`)); add(g);
       }
-      rail.appendChild(el('span', 'tl-line'));
-      li.append(rail, body);
-      ol.appendChild(li);
+      if (ts) prevTs = Math.max(prevTs, ts);
+    };
+    // La descripción es el primer mensaje del cliente.
+    if ((data.description || '').trim()) {
+      const ts = toTs(h.created);
+      gapBefore(ts);
+      const who = [...custNames][0] ? (data.fields || []).find(f => /^(cliente|contacto)$/i.test(f.label)).value : 'Cliente';
+      const m = el('div', 'msg');
+      const meta = el('div', 'msg-meta');
+      meta.innerHTML = '';
+      meta.append(Object.assign(el('strong', '', who)), `, descripción de la incidencia${h.created ? ', ' + dayMonth(h.created) : ''}`);
+      const b = el('div', 'bubble');
+      b.style.setProperty('--sh', 'var(--pink)');
+      bubbleContent(b, data.description);
+      m.append(meta, b);
+      add(m);
+    }
+    let lastHandoff = '';
+    activity.forEach(e => {
+      const ts = toTs(e.date);
+      const group = groupEvents.get(e);
+      const st = R_STATUS.exec(textOfEntry(e));
+      const hasFiles = (e.attachments || []).length > 0;
+      if (group) {
+        if (group.toLowerCase() === lastHandoff) return; // "Asignado a X" y "El grupo ha cambiado a X" son el mismo cambio
+        lastHandoff = group.toLowerCase();
+        gapBefore(ts);
+        const hnd = el('div', 'handoff');
+        const pill = el('span');
+        const sw = el('span', 'swatch'); sw.style.setProperty('--c', teamColor(group));
+        pill.append(sw, `Pasa a ${group}`);
+        pill.title = [dayMonth(e.date), e.author && `por ${e.author}`].filter(Boolean).join(', ');
+        hnd.appendChild(pill);
+        add(hnd);
+        return;
+      }
+      if (!e.isNote && !hasFiles) {
+        if (!withSystem && !st) return;
+        let txt;
+        if (st) txt = isClosedStatus(st[1]) ? `Marcada como ${st[1].trim().toLowerCase()}` : `Estado: ${st[1].trim()}`;
+        else txt = [e.type, e.action, e.body].filter(Boolean).join(' ') || '(evento)';
+        if (!withSystem && st && !isClosedStatus(st[1])) {
+          // Sin eventos automáticos solo se muestran cierres y reaperturas.
+          const prev = activity.slice(0, activity.indexOf(e)).reverse().find(x => R_STATUS.exec(textOfEntry(x)));
+          const prevSt = prev && R_STATUS.exec(textOfEntry(prev));
+          if (!(prevSt && isClosedStatus(prevSt[1]))) return;
+          txt = 'Reabierta';
+        }
+        gapBefore(ts);
+        add(Object.assign(el('div', 'event', `${txt}, ${dayMonth(e.date)}`)));
+        return;
+      }
+      gapBefore(ts);
+      const cust = isCustomer(e);
+      const step = stepAt(ts);
+      const m = el('div', 'msg' + (cust ? '' : ' r'));
+      const meta = el('div', 'msg-meta');
+      meta.appendChild(el('strong', '', e.author || 'Sistema'));
+      const role = cust ? 'cliente' : (step ? step.group : (e.type || ''));
+      meta.append(`${role ? ', ' + role : ''}, ${dayMonth(e.date)}`);
+      if (e.type && !cust) meta.title = e.type;
+      if (e.access && !/p[uú]blic/i.test(e.access)) meta.appendChild(el('span', 'priv', e.access));
+      const b = el('div', 'bubble');
+      b.style.setProperty('--sh', cust ? 'var(--pink)' : (step ? teamColor(step.group) : 'var(--sky)'));
+      if (e.type && !/agreg|nota/i.test(e.type)) b.appendChild(el('div', 'bubble-title', e.type));
+      const generic = hasFiles && isGenericBody(e.body, e.attachments.map(x => x.name));
+      if (e.body && !generic) bubbleContent(b, e.body);
+      if (hasFiles) {
+        const thumbs = el('div', 'thumbs');
+        const files = el('div', 'file-chips');
+        e.attachments.forEach(at => {
+          const idx = attachments.findIndex(x => x.entry === e && x.slot === at.slot);
+          const pv = idx >= 0 ? previewEl(idx, 'sm') : null;
+          if (pv) { thumbs.appendChild(pv); return; }
+          const chip = el('button', 'chip');
+          chip.type = 'button';
+          chip.innerHTML = ICON.clip;
+          chip.append(at.name);
+          chip.addEventListener('click', () => idx >= 0 && openModal(idx));
+          files.appendChild(chip);
+        });
+        if (thumbs.childNodes.length) b.appendChild(thumbs);
+        if (files.childNodes.length) b.appendChild(files);
+      }
+      m.append(meta, b);
+      add(m);
     });
   }
 
-  function renderSide() {
+  // ---------- lateral ----------
+  function renderTime() {
+    const total = Math.max(0, endTs - startTs);
+    $('time-total').textContent = startTs ? fmtDur(total) : '—';
+    // Tiempo sin actividad: suma de huecos de más de 2 h entre entradas.
+    const stamps = [startTs, ...activity.map(e => toTs(e.date)), endTs].filter(Boolean).sort((a, b) => a - b);
+    let idle = 0;
+    for (let k = 1; k < stamps.length; k++) { const d = stamps[k] - stamps[k - 1]; if (d >= GAP_MIN) idle += d; }
+    const note = $('time-note');
+    note.textContent = '';
+    note.append(closedNow ? 'hasta cerrarse, y ' : 'abierta, y ', el('strong', '', fmtDur(idle)), ' sin actividad');
+    if (teamSteps.length) {
+      const per = new Map();
+      teamSteps.forEach((s, i) => {
+        const d = Math.max(0, (i < teamSteps.length - 1 ? toTs(teamSteps[i + 1].date) : endTs) - toTs(s.date));
+        per.set(s.group, (per.get(s.group) || 0) + d);
+      });
+      const sum = [...per.values()].reduce((a, b) => a + b, 0) || 1;
+      const bar = $('time-bar');
+      bar.hidden = false;
+      bar.textContent = '';
+      $('time-legend').textContent = '';
+      per.forEach((d, g) => {
+        const s = el('span'); s.style.setProperty('--c', teamColor(g)); s.style.width = `${(d / sum) * 100}%`; s.title = `${g}: ${fmtDur(d, true)}`;
+        bar.appendChild(s);
+        const row = el('div');
+        const sw = el('span', 'sw'); sw.style.setProperty('--c', teamColor(g));
+        row.append(sw, el('span', 'nm', g), el('span', 'du', fmtDur(d)));
+        $('time-legend').appendChild(row);
+      });
+    }
+  }
+
+  function renderFiles() {
+    if (!attachments.length) return;
+    $('files-card').hidden = false;
+    const failed = attachments.filter(a => a.error);
+    if (failed.length) {
+      $('att-notice').hidden = false;
+      $('att-notice').textContent = `No se pudieron cargar ${failed.length} adjunto(s); se muestra la miniatura cuando existe.`;
+    }
+    const grid = $('files');
+    attachments.forEach((a, i) => {
+      const f = el('div', 'file');
+      const pv = previewEl(i, 'sm');
+      if (pv) f.appendChild(pv);
+      else {
+        const t = el('button', 'file-tile');
+        t.type = 'button';
+        t.innerHTML = ICON.file;
+        t.append((a.name.split('.').pop() || '').toUpperCase().slice(0, 5));
+        t.title = a.url ? `Abrir ${a.name}` : a.name;
+        t.addEventListener('click', () => openModal(i));
+        f.appendChild(t);
+      }
+      const info = el('button', 'info-btn', 'i');
+      info.type = 'button';
+      info.title = '¿De dónde sale este archivo?';
+      info.setAttribute('aria-label', `Origen de ${a.name}`);
+      info.addEventListener('click', ev => { ev.stopPropagation(); showOrigin(a, info); });
+      f.appendChild(info);
+      f.appendChild(el('div', 'file-name', a.name)).title = a.name;
+      grid.appendChild(f);
+    });
+  }
+
+  function renderFields() {
     const withFields = $('opt-fields').checked;
     const fields = data.fields || [];
     const isRes = f => /^nota de resoluci/i.test(f.label);
@@ -627,21 +694,24 @@
     $('res-card').hidden = !res.length;
     $('resolution').textContent = res.join('\n\n');
     const rest = fields.filter(f => !isRes(f));
-    $('fields-card').hidden = !withFields || !rest.length;
+    $('fields-card').hidden = !withFields || (!rest.length && $('source').hidden);
     const dl = $('fields');
     dl.textContent = '';
-    rest.forEach(f => {
-      const row = el('div');
-      row.append(el('dt', '', f.label), el('dd', '', f.value));
-      dl.appendChild(row);
-    });
+    rest.forEach(f => dl.append(el('dt', '', f.label), el('dd', '', f.value)));
+  }
+
+  function renderSummary() {
+    const sm = data.summary;
+    if (!sm || !sm.markdown) return;
+    $('summary-card').hidden = false;
+    $('summary-meta').textContent = ['Generado', sm.date && `el ${dayMonth(sm.date)}`, sm.by && `por ${sm.by}`].filter(Boolean).join(' ');
+    renderMiniMarkdown($('summary'), sm.markdown);
   }
 
   let mode = 'view';
   function render() {
-    renderTeams();
-    renderTimeline();
-    renderSide();
+    renderChat();
+    renderFields();
     $('md').textContent = buildText();
     $('view').hidden = mode !== 'view';
     $('md').hidden = mode !== 'md';
@@ -652,17 +722,19 @@
   $('opt-fields').onchange = render;
   $('mode-view').onclick = () => { mode = 'view'; render(); };
   $('mode-md').onclick = () => { mode = 'md'; render(); };
+  renderMetro();
   renderSummary();
-  renderDescription();
+  renderTime();
+  renderFiles();
   render();
   if (embedded) {
     // Avisa a SmartIT de que el visor ya está pintado (para mostrarlo con la animación).
     requestAnimationFrame(() => parent.postMessage({ sie: 'viewer-ready' }, '*'));
-    // Esc vuelve a SmartIT, salvo que haya abierta una imagen a pantalla completa o el recuadro ⓘ.
+    // Esc vuelve a SmartIT, salvo que haya abierta una imagen a pantalla completa, el recuadro ⓘ o los ajustes.
     document.addEventListener('keydown', ev => {
       if (ev.key !== 'Escape') return;
       const modalOpen = !$('modal').hidden;
-      const popOpen = document.querySelector('.origin-pop') && !document.querySelector('.origin-pop').hidden;
+      const popOpen = !pop.hidden;
       const menuOpen = !$('settings-menu').hidden;
       if (!modalOpen && !popOpen && !menuOpen) parent.postMessage({ sie: 'viewer-close' }, '*');
     }, true);
@@ -673,12 +745,12 @@
     await navigator.clipboard.writeText(buildText());
     const b = $('copy');
     b.classList.add('ok');
-    $('copy-label').textContent = '¡Markdown copiado!';
+    $('copy-label').textContent = '¡Copiado!';
     $('toast').hidden = false;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
       b.classList.remove('ok');
-      $('copy-label').textContent = 'Pulsa aquí para copiar el markdown completo';
+      $('copy-label').textContent = 'Copiar para el agente';
       $('toast').hidden = true;
     }, 1800);
   };

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SmartIT – Exportar incidencia",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "Uso personal. Exporta una incidencia de BMC Helix SmartIT a un visor local: todo el texto listo para copiar y los adjuntos sin descargarlos. Solo lectura.",
   "permissions": [
     "storage",
@@ -54,7 +54,8 @@
         "viewer.html",
         "viewer.js",
         "viewer.css",
-        "theme.js"
+        "theme.js",
+        "fonts/*"
       ],
       "matches": [
         "https://*.onbmc.com/*"

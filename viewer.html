@@ -7,69 +7,56 @@
   <script src="theme.js"></script>
 </head>
 <body>
-  <header class="topbar">
-    <div class="wrap topbar-in">
-      <div class="head-main">
-        <div class="eyebrow">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9z"/><path d="M8.5 11h7M8.5 14.5h7M8.5 18h4"/></svg>
-          <span id="exported">SmartIT · Exportación</span>
-        </div>
-        <div class="title-row">
-          <span id="number" class="inc-pill" hidden></span>
-          <h1 id="title">Cargando…</h1>
-        </div>
-        <div id="meta" class="meta"></div>
-      </div>
-      <div class="head-side">
-      <div class="head-top">
+  <header class="top wrap">
+    <div class="head-main">
+      <div id="number" class="inc-num"></div>
+      <h1 id="title">Cargando…</h1>
+      <p id="lede" class="lede"></p>
+    </div>
+    <div class="head-side">
       <div id="update" class="update-pill" role="status" hidden>
-        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/></svg>
-        <span><strong id="update-version">Versión nueva disponible</strong> <span id="update-installed" class="update-installed"></span></span>
+        <span><strong id="update-version">Versión nueva disponible</strong> <span id="update-installed" class="muted"></span></span>
         <a id="update-link" target="_blank" rel="noopener">Ver cómo actualizar</a>
         <button type="button" id="update-close" class="update-close" aria-label="Ocultar hasta la próxima versión" title="Ocultar hasta la próxima versión">
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
-      <div class="settings">
-        <button type="button" id="settings-btn" class="settings-btn" aria-label="Ajustes" title="Ajustes" aria-expanded="false" aria-controls="settings-menu">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-        </button>
-        <div id="settings-menu" class="settings-menu" role="dialog" aria-label="Ajustes" hidden>
-          <div class="settings-title">Ajustes</div>
-          <div class="settings-label" id="theme-label">Tema</div>
-          <div class="seg theme-seg" role="group" aria-labelledby="theme-label">
-            <button type="button" data-theme-pref="light" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Claro</button>
-            <button type="button" data-theme-pref="dark" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>Oscuro</button>
-            <button type="button" data-theme-pref="system" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Sistema</button>
-          </div>
-          <div class="settings-note">Se recuerda en este navegador.</div>
-        </div>
-      </div>
-      </div>
       <div class="head-actions">
-      <button type="button" id="zip" class="btn-outline">
-        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
-        <span id="zip-label">Descargar .zip</span>
-      </button>
-      <a id="source" class="btn-outline" target="_blank" rel="noopener" hidden>
-        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
-        Abrir en SmartIT
-      </a>
-      </div>
+        <div class="settings">
+          <button type="button" id="settings-btn" class="icon-link" aria-label="Ajustes" title="Ajustes" aria-expanded="false" aria-controls="settings-menu">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+          </button>
+          <div id="settings-menu" class="settings-menu card" role="dialog" aria-label="Ajustes" hidden>
+            <div class="settings-title">Ajustes</div>
+            <div class="settings-label" id="theme-label">Tema</div>
+            <div class="seg" role="group" aria-labelledby="theme-label">
+              <button type="button" data-theme-pref="light" aria-pressed="false">Claro</button>
+              <button type="button" data-theme-pref="dark" aria-pressed="false">Oscuro</button>
+              <button type="button" data-theme-pref="system" aria-pressed="false">Sistema</button>
+            </div>
+            <div class="settings-note">Se recuerda en este navegador.</div>
+          </div>
+        </div>
+        <button type="button" id="zip" class="text-link">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
+          <span id="zip-label" class="u">Descargar .zip</span>
+        </button>
+        <button type="button" id="copy" class="btn-card">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>
+          <span id="copy-label">Copiar para el agente</span>
+        </button>
       </div>
     </div>
   </header>
 
-  <main class="wrap main">
-    <section class="info" aria-labelledby="info-h">
-      <div class="info-head">
-        <div>
-          <h2 id="info-h">Información para el agente</h2>
-          <button type="button" id="copy" class="copy-link">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>
-            <span id="copy-label">Pulsa aquí para copiar el markdown completo</span>
-          </button>
-        </div>
+  <section id="metro-card" class="card metro-card wrap-m" aria-label="Recorrido entre equipos" hidden>
+    <div id="metro"></div>
+  </section>
+
+  <div class="wrap body-grid">
+    <main class="main-col">
+      <div class="toolbar">
+        <h2 class="mono-h">Conversación</h2>
         <div class="controls">
           <label class="check"><input type="checkbox" id="opt-system" checked> Eventos automáticos</label>
           <label class="check"><input type="checkbox" id="opt-fields" checked> Datos de la ficha</label>
@@ -79,64 +66,41 @@
           </div>
         </div>
       </div>
-
-      <div id="teams" class="teams" role="list" aria-label="Recorrido entre equipos" hidden></div>
-
-      <div id="view" class="cols">
-        <div class="col-main">
-          <article class="card pad summary-card" id="summary-card" hidden>
-            <div class="summary-head">
-              <h3 class="label summary-label">
-                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
-                Resumen de HelixGPT
-              </h3>
-              <span id="summary-meta" class="muted small"></span>
-            </div>
-            <div id="summary" class="summary"></div>
-          </article>
-          <article class="card pad" id="desc-card">
-            <h3 class="label">Descripción</h3>
-            <div id="desc" class="desc"></div>
-          </article>
-          <article class="card pad">
-            <div class="act-head">
-              <h3 class="label">Actividad</h3>
-              <span id="act-count" class="muted small"></span>
-            </div>
-            <ol id="timeline" class="timeline"></ol>
-          </article>
-        </div>
-        <aside class="col-side">
-          <div class="card pad" id="fields-card">
-            <h3 class="label">Datos de la incidencia</h3>
-            <dl id="fields" class="fields"></dl>
-          </div>
-          <div class="card pad" id="res-card" hidden>
-            <h3 class="label">Resolución</h3>
-            <p id="resolution" class="res"></p>
-          </div>
-        </aside>
+      <div id="view">
+        <article id="summary-card" class="card summary-card" hidden>
+          <div class="card-h">Resumen de HelixGPT</div>
+          <div id="summary" class="summary"></div>
+          <div id="summary-meta" class="card-foot"></div>
+        </article>
+        <ol id="chat" class="chat"></ol>
       </div>
       <pre id="md" class="card md" hidden></pre>
-    </section>
+    </main>
 
-    <section class="card att-card" aria-labelledby="att-h">
-      <div class="att-head">
-        <div class="att-title">
-          <h2 id="att-h">Adjuntos</h2>
-          <span id="att-count" class="count">0</span>
-          <span class="hint">Pulsa una imagen para verla a pantalla completa · ⓘ muestra de dónde sale</span>
-        </div>
-        <div class="att-nav">
-          <button type="button" class="icon-btn" id="car-prev" aria-label="Anteriores"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
-          <button type="button" class="icon-btn" id="car-next" aria-label="Siguientes"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
-        </div>
-      </div>
-      <div id="att-notice" class="notice" hidden></div>
-      <div id="carousel" class="carousel"></div>
-      <p id="att-empty" class="empty" hidden>Esta incidencia no tiene adjuntos.</p>
-    </section>
-  </main>
+    <aside class="rail">
+      <section id="time-card" class="card time-card">
+        <h2 class="mono-h">Tiempo</h2>
+        <div id="time-total" class="big-num"></div>
+        <div id="time-note" class="muted small-p"></div>
+        <div id="time-bar" class="time-bar" hidden></div>
+        <div id="time-legend" class="time-legend"></div>
+      </section>
+      <section id="files-card" class="card files-card" hidden>
+        <h2 class="mono-h">Archivos</h2>
+        <div id="att-notice" class="notice" hidden></div>
+        <div id="files" class="files-grid"></div>
+      </section>
+      <section id="fields-card" class="card fields-card">
+        <h2 class="mono-h">Ficha</h2>
+        <dl id="fields" class="fields"></dl>
+        <div class="card-foot"><a id="source" class="u" target="_blank" rel="noopener" hidden>Ver en SmartIT</a></div>
+      </section>
+      <section id="res-card" class="card res-card" hidden>
+        <h2 class="mono-h">Resolución</h2>
+        <p id="resolution" class="res"></p>
+      </section>
+    </aside>
+  </div>
 
   <div id="modal" class="modal" hidden>
     <button class="modal-close" id="modal-close" aria-label="Cerrar">✕</button>
