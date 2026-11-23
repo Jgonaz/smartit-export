@@ -19,12 +19,12 @@ Actualmente, la actividad de SmartIT está paginada y no se puede copiar entera 
 
 Abre una incidencia y pulsa el icono 📋 de la cabecera de SmartIT, a la izquierda de la lupa. El contenido de SmartIT se funde a blanco mientras se analiza la incidencia y el visor aparece en su lugar, dentro de la propia página. Para volver a SmartIT, pulsa el icono de nuevo (ahora es una flecha circular) o Esc:
 
-- La información de la incidencia con formato, con el enlace «Pulsa aquí para copiar el markdown completo», el selector Vista / Markdown y opciones para incluir o quitar los eventos automáticos (cambios de estado, asignaciones…) y los datos de la ficha.
-- Si la incidencia tiene un resumen de HelixGPT, se muestra completo encima de la descripción y se incluye al principio del Markdown.
-- Engranaje de ajustes (arriba a la derecha del visor): tema claro, oscuro o el del sistema.
+- «Copiar para el agente»: copia toda la incidencia en Markdown. El selector Vista / Markdown muestra ese texto, y hay opciones para incluir o quitar los eventos automáticos (cambios de estado, asignaciones…) y los datos de la ficha.
+- Si la incidencia tiene un resumen de HelixGPT, se muestra completo al principio de la conversación y se incluye al principio del Markdown.
+- Engranaje de ajustes (arriba a la derecha del visor): tema claro, oscuro o el del sistema, y estilo «Tarjetas» o «Clásico».
 - «Descargar .zip»: descarga `<incidencia>.zip` con el `incidencia.md` y todos los adjuntos en `adjuntos/`, enlazados desde el Markdown.
-- Si la incidencia ha pasado por varios equipos o se ha reabierto, se muestra su recorrido, indicando en qué paso se cerró, se reabrió y cuál es el actual.
-- Al final, el carrusel con todos los adjuntos.
+- El recorrido de la incidencia entre equipos, con el tiempo en cada uno, dónde se cerró, se reabrió y dónde está ahora.
+- La actividad como una conversación, con los tiempos sin actividad, y en el lateral el tiempo por equipo, los adjuntos y la ficha.
 
 ## Cómo funciona
 
@@ -34,7 +34,8 @@ Abre una incidencia y pulsa el icono 📋 de la cabecera de SmartIT, a la izquie
 | `content.js` | En la ficha (Helix Progressive Views) lee los campos, recorre las páginas de la actividad y carga los adjuntos. |
 | `main-hook.js` | Observa (sin modificarlas) las peticiones que hace la propia aplicación para reutilizar su cabecera de sesión al pedir los adjuntos. |
 | `background.js` | Guarda la exportación y abre el visor. |
-| `viewer.html` / `viewer.js` / `viewer.css` | El visor local. 
+| `viewer.html` / `viewer.js` / `viewer.css` | El visor local. |
+| `tests/` | Datos inventados y un generador de páginas para probar el visor sin SmartIT. |
 
 ## Privacidad y seguridad
 

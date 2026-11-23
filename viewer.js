@@ -90,9 +90,19 @@
     const s = text.slice(from, to).replace(/\n{3,}/g, '\n\n').trim();
     return (from > 0 ? '…' : '') + s;
   }
-  function findMentions(a) {
+  // Formas en que el texto puede nombrar un adjunto. El nombre completo siempre vale; el nombre sin
+  // extensión solo si no puede confundirse con texto normal: "image002", "captura-login", "IMG_1234"…
+  // pero no "correo" (una palabra) ni "0320121551" (un número que puede ser un dato del cliente).
+  const looksLikeFileName = st => /^(image|imagen|img)[\s_-]*\d+$/i.test(st) ||
+    (/[A-Za-zÁÉÍÓÚáéíóúÑñ]/.test(st) && /\d/.test(st)) || (/[\s_.-]/.test(st.trim()) && st.trim().length >= 6);
+  const nameForms = a => {
     const stem = a.name.replace(/\.[^.]+$/, '');
-    const stems = [...new Set([a.name, stem, stem.replace(/\s*\(\d+\)$/, '')])].filter(s => s.length >= 4);
+    const forms = [a.name];
+    [stem, stem.replace(/\s*\(\d+\)$/, '')].forEach(st => { if (st.length >= 4 && looksLikeFileName(st)) forms.push(st); });
+    return [...new Set(forms)];
+  };
+  function findMentions(a) {
+    const stems = nameForms(a);
     const sources = [{ label: 'Descripción de la incidencia', text: data.description || '' }];
     (data.activity || []).forEach(e => {
       if (e === a.entry || !e.body) return;
@@ -101,7 +111,7 @@
     const found = [];
     for (const src of sources) {
       for (const s of stems) {
-        const m = new RegExp(escRe(s) + '(?![\\w])', 'i').exec(src.text);
+        const m = new RegExp('(?<![\\w.])' + escRe(s) + '(?![\\w])', 'i').exec(src.text);
         if (m) { found.push({ label: `Mencionada en: ${src.label}`, text: snippetAround(src.text, m.index, m[0].length) }); break; }
       }
     }
@@ -274,12 +284,9 @@
     return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
   }
   // Texto con las menciones a adjuntos convertidas en etiquetas pulsables.
-  const mentionList = attachments.flatMap((a, i) => {
-    const stem = a.name.replace(/\.[^.]+$/, '');
-    return [...new Set([a.name, stem, stem.replace(/\s*\(\d+\)$/, '')])].filter(s => s.length >= 4).map(s => ({ s, i }));
-  }).sort((x, y) => y.s.length - x.s.length);
+  const mentionList = attachments.flatMap((a, i) => nameForms(a).map(s => ({ s, i }))).sort((x, y) => y.s.length - x.s.length);
   const mentionRe = mentionList.length
-    ? new RegExp('(' + mentionList.map(m => escRe(m.s)).join('|') + ')(?![\\w])', 'gi') : null;
+    ? new RegExp('(?<![\\w.])(' + mentionList.map(m => escRe(m.s)).join('|') + ')(?![\\w])', 'gi') : null;
   function richText(target, text) {
     if (!mentionRe) { target.append(text); return; }
     let last = 0;
