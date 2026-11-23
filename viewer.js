@@ -422,13 +422,13 @@
   const showTeams = teamSteps.length >= 3 || (teamSteps.length >= 2 && teamSteps.some(s => s.reopened));
 
   // Reparto en filas: hasta 7 pasos en una fila; a partir de 8, el mínimo de filas posible con
-  // como mucho 7 por fila, repartidos a partes iguales (los sobrantes, en las últimas filas).
-  // 8 → 4/4 · 9 → 4/5 · 10 → 5/5 · 14 → 7/7 · 15 → 5/5/5
+  // como mucho 7 por fila, repartidos a partes iguales (los sobrantes, en las primeras filas).
+  // 8 → 4/4 · 9 → 5/4 · 10 → 5/5 · 14 → 7/7 · 15 → 5/5/5 · 16 → 6/5/5
   function rowSizes(n) {
     const rows = Math.max(1, Math.ceil(n / 7));
     const base = Math.floor(n / rows);
     const extra = n % rows;
-    return Array.from({ length: rows }, (_, r) => base + (r >= rows - extra ? 1 : 0));
+    return Array.from({ length: rows }, (_, r) => base + (r < extra ? 1 : 0));
   }
 
   function renderTeams() {
@@ -444,9 +444,13 @@
       return arrow;
     };
     let i = 0;
-    rowSizes(teamSteps.length).forEach((size, r) => {
+    const sizes = rowSizes(teamSteps.length);
+    const cols = sizes[0];
+    // Todas las tarjetas miden lo mismo (el ancho de la fila más larga); las filas cortas van centradas.
+    box.style.setProperty('--cols', cols);
+    box.classList.toggle('dense', cols > 6);
+    sizes.forEach((size, r) => {
       const ol = el('ol', 'teams-row');
-      ol.classList.toggle('dense', size > 6);
       for (let j = 0; j < size; j++, i++) {
         const s = teamSteps[i];
         // La flecha va entre pasos (y al empezar cada fila siguiente, para que se lea como continuación).
@@ -461,7 +465,7 @@
         else if (counts[k] > 1) step.appendChild(Object.assign(el('span', 'team-repeat', `${counts[k]}ª vez`), { title: 'Vuelve a un equipo por el que ya pasó' }));
         if (s.closed) step.appendChild(Object.assign(el('span', 'team-closed', 'cerrada'), { title: `Marcada como «${s.closedAs}» en este paso` }));
         if (i === teamSteps.length - 1 && !s.closed) step.appendChild(el('span', 'team-now', 'actual'));
-        const dense = size > 6;
+        const dense = cols > 6;
         const when = dense ? shortDate(s.date).replace(/\/\d{4}/, '') : shortDate(s.date);
         const meta = el('div', 'team-meta');
         meta.appendChild(el('div', '', when)).title = s.date;
