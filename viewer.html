@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Incidencia – visor</title>
+  <link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1 id="title">Cargando…</h1>
+      <div id="subtitle" class="muted"></div>
+    </div>
+    <a id="source" class="muted" target="_blank" rel="noopener"></a>
+  </header>
+
+  <section class="card">
+    <div class="section-head">
+      <h2>Adjuntos <span id="att-count" class="pill">0</span></h2>
+    </div>
+    <div id="att-notice" class="notice" hidden></div>
+    <div class="carousel-wrap">
+      <button class="nav prev" id="car-prev" aria-label="Anterior">‹</button>
+      <div id="carousel" class="carousel"></div>
+      <button class="nav next" id="car-next" aria-label="Siguiente">›</button>
+    </div>
+    <p id="att-empty" class="muted" hidden>Esta incidencia no tiene adjuntos.</p>
+  </section>
+
+  <section class="card">
+    <div class="section-head">
+      <h2>Información para el agente</h2>
+      <div class="actions">
+        <label class="toggle"><input type="checkbox" id="opt-system" checked> Incluir eventos automáticos (estado, asignación…)</label>
+        <label class="toggle"><input type="checkbox" id="opt-fields" checked> Incluir datos de la ficha</label>
+        <button id="copy" class="primary">Copiar</button>
+      </div>
+    </div>
+    <div id="activity-status" class="muted small"></div>
+    <textarea id="text" readonly spellcheck="false"></textarea>
+  </section>
+
+  <div id="modal" class="modal" hidden>
+    <button class="modal-close" id="modal-close" aria-label="Cerrar">✕</button>
+    <button class="modal-nav prev" id="modal-prev" aria-label="Anterior">‹</button>
+    <figure>
+      <img id="modal-img" alt="">
+      <figcaption><span id="modal-cap"></span> <a id="modal-dl" class="modal-dl" hidden>Guardar</a></figcaption>
+    </figure>
+    <button class="modal-nav next" id="modal-next" aria-label="Siguiente">›</button>
+  </div>
+
+  <script src="viewer.js"></script>
+</body>
+</html>
