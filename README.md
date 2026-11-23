@@ -6,6 +6,8 @@ Extensión de Chrome para **BMC Helix SmartIT** que reúne en una sola pantalla 
 
 Actualmente, la actividad de SmartIT está paginada y no se puede copiar entera con Ctrl+C / Ctrl+V y los adjuntos solo están disponibles al descargar. Este panel soluciona ese problema de UX.
 
+![Visor de una incidencia de ejemplo: recorrido entre equipos, conversación, tiempos y archivos](docs/visor.png)
+
 ## Instalación
 
 1. Descarga el .zip
