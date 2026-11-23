@@ -21,10 +21,13 @@
     #${ICON_ID}{float:left;position:relative;display:flex;align-items:center;justify-content:center;box-sizing:content-box;width:30px;height:20px;padding:10px 6px;margin-top:2px;color:#fff;cursor:pointer;opacity:.9;line-height:0}
     #${ICON_ID}:hover{opacity:1}
     #${ICON_ID}.hidden{display:none}
-    #${ICON_ID}.appear .sie-i-clip{animation:sie-pop ${T(520)}ms cubic-bezier(.2,.9,.25,1.25) both}
+    #${ICON_ID}.appear .sie-i-clip{animation:sie-pop ${T(520)}ms cubic-bezier(.2,.9,.25,1.25) backwards}
+    #${ICON_ID}.open .sie-i-clip{animation:none}
+    #${ICON_ID}:focus{outline:none}
+    #${ICON_ID}:focus-visible{outline:2px solid rgba(255,255,255,.6);outline-offset:1px;border-radius:6px}
     #${ICON_ID} .sie-splash{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;
       border:2px solid rgba(255,255,255,.55);opacity:0;pointer-events:none}
-    #${ICON_ID}.appear .sie-splash{animation:sie-splash ${T(700)}ms ease-out ${T(160)}ms both}
+    #${ICON_ID}.appear .sie-splash{animation:sie-splash ${T(700)}ms ease-out ${T(160)}ms backwards}
     @keyframes sie-pop{0%{opacity:0;transform:scale(.4) rotate(-12deg)}60%{opacity:1;transform:scale(1.08) rotate(2deg)}100%{opacity:1;transform:none}}
     @keyframes sie-splash{0%{opacity:.7;transform:scale(.6)}100%{opacity:0;transform:scale(1.6)}}
     #${ICON_ID} .sie-dot{position:absolute;top:4px;right:3px;width:10px;height:10px;border-radius:50%;background:#F5A524;box-shadow:0 0 0 2px #3B3B3B;
@@ -317,6 +320,8 @@
         a.classList.remove('appear');
         void a.offsetWidth; // reinicia la animación
         a.classList.add('appear');
+        // Al acabar la animación se quita la clase, para que no interfiera con el cambio a la flecha.
+        setTimeout(() => a.classList.remove('appear'), T(900));
       }
     }
   }
