@@ -66,6 +66,17 @@
 
       <div id="view" class="cols">
         <div class="col-main">
+          <article class="card pad summary-card" id="summary-card" hidden>
+            <div class="summary-head">
+              <h3 class="label summary-label">
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
+                Resumen de HelixGPT
+              </h3>
+              <span id="summary-meta" class="muted small"></span>
+            </div>
+            <div id="summary" class="summary collapsed"></div>
+            <button type="button" id="summary-toggle" class="summary-toggle" hidden>Mostrar todo</button>
+          </article>
           <article class="card pad" id="desc-card">
             <h3 class="label">Descripción</h3>
             <div id="desc" class="desc"></div>

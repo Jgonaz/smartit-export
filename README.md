@@ -20,6 +20,7 @@ Actualmente, la actividad de SmartIT está paginada y no se puede copiar entera 
 Abre una incidencia y pulsa el icono 📋 de la cabecera de SmartIT, a la izquierda de la lupa. El contenido de SmartIT se funde a blanco mientras se analiza la incidencia y el visor aparece en su lugar, dentro de la propia página. Para volver a SmartIT, pulsa el icono de nuevo (ahora es una flecha circular) o Esc:
 
 - La información de la incidencia con formato, con el enlace «Pulsa aquí para copiar el markdown completo», el selector Vista / Markdown y opciones para incluir o quitar los eventos automáticos (cambios de estado, asignaciones…) y los datos de la ficha.
+- Si la incidencia tiene un resumen de HelixGPT, se muestra completo encima de la descripción y se incluye al principio del Markdown.
 - «Descargar .zip»: descarga `<incidencia>.zip` con el `incidencia.md` y todos los adjuntos en `adjuntos/`, enlazados desde el Markdown.
 - Si la incidencia ha pasado por varios equipos o se ha reabierto, se muestra su recorrido, indicando en qué paso se cerró, se reabrió y cuál es el actual.
 - Al final, el carrusel con todos los adjuntos.

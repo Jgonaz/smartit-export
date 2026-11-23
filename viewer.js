@@ -294,6 +294,10 @@
     [['Estado', h.status], ['Prioridad', h.priority], ['Fecha de creación', h.created],
       ['Última modificación', h.modified]].forEach(([k, v]) => v && L.push(`${k}: ${v}`));
     L.push('');
+    if (data.summary && data.summary.markdown) {
+      const meta = [data.summary.by && `por ${data.summary.by}`, data.summary.date].filter(Boolean).join(', ');
+      L.push('## Resumen de HelixGPT' + (meta ? ` (generado ${meta})` : ''), data.summary.markdown, '');
+    }
     if (data.description) { L.push('## Descripción', data.description, ''); }
     if (withFields && data.fields && data.fields.length) {
       L.push('## Datos de la incidencia');
@@ -500,6 +504,58 @@
     return hit ? hit.i : -1;
   }
 
+  // Pinta el Markdown sencillo del resumen (listas anidadas, **negritas**) sin usar HTML ajeno.
+  function renderMiniMarkdown(target, md) {
+    const inlineInto = (node, text) => {
+      text.split(/(\*\*[^*]+\*\*)/).forEach(part => {
+        if (/^\*\*[^*]+\*\*$/.test(part)) node.appendChild(el('strong', '', part.slice(2, -2)));
+        else if (part) node.append(part);
+      });
+    };
+    const stack = [{ depth: -1, node: target }];
+    md.split('\n').forEach(line => {
+      const m = line.match(/^(\s*)- (.*)$/);
+      if (!m) {
+        stack.length = 1;
+        if (line.trim()) { const p = el('p'); inlineInto(p, line.trim()); target.appendChild(p); }
+        return;
+      }
+      const depth = Math.floor(m[1].length / 2);
+      while (stack.length > 1 && stack[stack.length - 1].depth >= depth) stack.pop();
+      let parent = stack[stack.length - 1];
+      let ul;
+      if (parent.depth === -1) {
+        ul = target.lastElementChild && target.lastElementChild.tagName === 'UL' && stack.length === 1 && target.lastElementChild.dataset.root ? target.lastElementChild : null;
+        if (!ul) { ul = el('ul'); ul.dataset.root = '1'; target.appendChild(ul); }
+      } else {
+        const li = parent.node;
+        ul = li.lastElementChild && li.lastElementChild.tagName === 'UL' ? li.lastElementChild : li.appendChild(el('ul'));
+      }
+      const li = el('li');
+      inlineInto(li, m[2]);
+      ul.appendChild(li);
+      stack.push({ depth, node: li });
+    });
+  }
+
+  function renderSummary() {
+    const sm = data.summary;
+    if (!sm || !sm.markdown) return;
+    $('summary-card').hidden = false;
+    $('summary-meta').textContent = ['Generado', sm.by && `por ${sm.by}`, sm.date && `el ${sm.date}`].filter(Boolean).join(' ');
+    const box = $('summary');
+    renderMiniMarkdown(box, sm.markdown);
+    requestAnimationFrame(() => {
+      if (box.scrollHeight <= box.clientHeight + 4) { box.classList.remove('collapsed'); return; }
+      const btn = $('summary-toggle');
+      btn.hidden = false;
+      btn.onclick = () => {
+        const collapsed = box.classList.toggle('collapsed');
+        btn.textContent = collapsed ? 'Mostrar todo' : 'Mostrar menos';
+      };
+    });
+  }
+
   function renderDescription() {
     const box = $('desc');
     box.textContent = '';
@@ -605,6 +661,7 @@
   $('opt-fields').onchange = render;
   $('mode-view').onclick = () => { mode = 'view'; render(); };
   $('mode-md').onclick = () => { mode = 'md'; render(); };
+  renderSummary();
   renderDescription();
   render();
   if (embedded) {

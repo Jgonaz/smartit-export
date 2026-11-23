@@ -103,6 +103,53 @@
     return out;
   }
 
+  // ---------- resumen de HelixGPT ----------
+  // El recuadro "Resumen" de HelixGPT trae el texto completo en el DOM aunque se vea recortado.
+  // Se convierte a Markdown sencillo (listas anidadas y negritas), sin copiar HTML.
+  function htmlToMarkdown(rootEl) {
+    const out = [];
+    const inline = node => {
+      let t = '';
+      node.childNodes.forEach(n => {
+        if (n.nodeType === 3) t += n.textContent;
+        else if (n.nodeType === 1) {
+          const tag = n.tagName;
+          if (tag === 'UL' || tag === 'OL') return;           // las sublistas van aparte
+          if (tag === 'BR') { t += ' '; return; }
+          const inner = inline(n);
+          t += (tag === 'STRONG' || tag === 'B') && inner.trim() ? `**${inner.trim()}**` : inner;
+        }
+      });
+      return t;
+    };
+    const clean = t => t.replace(/[ \t ]+/g, ' ').trim();
+    const walkList = (list, depth) => {
+      [...list.children].forEach(li => {
+        if (li.tagName !== 'LI') return;
+        const text = clean(inline(li));
+        if (text) out.push(`${'  '.repeat(depth)}- ${text}`);
+        li.querySelectorAll(':scope > ul, :scope > ol').forEach(sub => walkList(sub, depth + 1));
+      });
+    };
+    [...rootEl.children].forEach(child => {
+      if (child.tagName === 'UL' || child.tagName === 'OL') walkList(child, 0);
+      else { const t = clean(inline(child)); if (t) out.push(t, ''); }
+    });
+    if (!out.length) out.push(clean(rootEl.textContent));
+    return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  function collectSummary() {
+    const content = document.querySelector('.helixGptChat-summary-response-content');
+    if (!content) return null;
+    const markdown = htmlToMarkdown(content);
+    if (!markdown) return null;
+    const by = (document.getElementById('summaryGeneratedBy_data') || {}).textContent?.trim() || '';
+    const meta = (document.querySelector('.helixGptChat-summary-right-button-group') || {}).textContent || '';
+    const date = (meta.match(/\d{1,2}\/\d{1,2}\/\d{4}\s+\d{1,2}:\d{2}/) || [''])[0];
+    return { markdown, by, date };
+  }
+
   // ---------- actividad ----------
   function feedIframes(root) {
     return [...root.querySelectorAll('iframe[id^="VFWLG"]')];
@@ -371,6 +418,7 @@
       const header = collectHeader();
       const description = collectDescription();
       const fields = collectFields();
+      const summary = collectSummary();
       const activity = await collectActivity(progress);
       await loadAttachments(activity.entries, progress);
       progress('Preparando la vista...');
@@ -378,7 +426,7 @@
         version: 1,
         exportedAt: new Date().toISOString(),
         sourceUrl: sourceUrl || '',
-        header, description, fields,
+        header, description, fields, summary,
         activity: activity.entries,
         activityStatus: activity.status
       };
