@@ -32,6 +32,17 @@ h1 { font-size: 24px; line-height: 1.25; font-weight: 700; letter-spacing: -0.01
 button.btn-outline { font: inherit; font-weight: 600; cursor: pointer; }
 button.btn-outline[disabled] { cursor: progress; opacity: .7; }
 .head-actions { display: flex; align-items: center; gap: 10px; }
+.head-side { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+.update-pill { display: inline-flex; align-items: center; gap: 10px; background: var(--accent-bg); border: 1px solid var(--accent-line); border-radius: 999px; padding: 6px 8px 6px 12px; font-size: 13px; color: var(--accent-2); animation: sie-pill-in .35s cubic-bezier(.2,.7,.2,1); }
+.update-pill > .ico { color: var(--accent); width: 14px; height: 14px; }
+.update-pill strong { font-weight: 600; }
+.update-installed { color: #4A5BC4; }
+.update-pill a { font-weight: 600; color: var(--accent); text-underline-offset: 3px; }
+.update-close { width: 26px; height: 26px; border-radius: 50%; border: 0; background: transparent; color: #4A5BC4; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.update-close:hover { background: var(--accent-line); }
+.update-close .ico { width: 14px; height: 14px; }
+@keyframes sie-pill-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .update-pill { animation: none; } }
 
 .main { padding-top: 28px; padding-bottom: 56px; display: flex; flex-direction: column; gap: 24px; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }

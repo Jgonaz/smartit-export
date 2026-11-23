@@ -21,6 +21,10 @@
     #${ICON_ID}{float:left;position:relative;display:flex;align-items:center;justify-content:center;box-sizing:content-box;width:30px;height:20px;padding:10px 6px;margin-top:2px;color:#fff;cursor:pointer;opacity:.9;line-height:0}
     #${ICON_ID}:hover{opacity:1}
     #${ICON_ID}.hidden{display:none}
+    #${ICON_ID} .sie-dot{position:absolute;top:4px;right:3px;width:10px;height:10px;border-radius:50%;background:#F5A524;box-shadow:0 0 0 2px #3B3B3B;
+      opacity:0;transform:scale(.4);transition:opacity ${T(250)}ms ease, transform ${T(300)}ms cubic-bezier(.2,.7,.2,1);pointer-events:none}
+    #${ICON_ID}.has-update .sie-dot{opacity:1;transform:none}
+    #${ICON_ID}.open .sie-dot{opacity:0}
     #${ICON_ID} .sie-i{position:absolute;left:6px;top:5px;flex:none!important;overflow:visible!important;width:30px!important;height:30px!important;
       min-width:30px!important;min-height:30px!important;max-width:none!important;max-height:none!important;margin:0!important;
       transition:opacity ${T(220)}ms ease, transform ${T(320)}ms cubic-bezier(.2,.7,.2,1)}
@@ -57,12 +61,22 @@
   const icon = () => document.getElementById(ICON_ID);
   const wait = ms => new Promise(r => setTimeout(r, T(ms)));
 
+  let update = null; // { remote } si hay una versión nueva de la extensión
   function setIcon(open, title) {
     const a = icon();
     if (!a) return;
     a.classList.toggle('open', open);
-    a.title = title || (open ? 'Volver a SmartIT' : 'Exportar incidencia (texto + adjuntos)');
+    a.classList.toggle('has-update', !!update);
+    const base = title || (open ? 'Volver a SmartIT' : 'Exportar incidencia (texto + adjuntos)');
+    a.title = (!open && update) ? `${base}\nHay una versión nueva de la extensión (${update.remote})` : base;
     a.setAttribute('aria-label', a.title);
+  }
+  // Aviso de versión nueva (la comprobación, como mucho diaria, la hace background.js).
+  function checkUpdate() {
+    chrome.runtime.sendMessage({ type: 'update-info' }).then(info => {
+      update = info && info.available && !info.dismissed ? info : null;
+      setIcon(state !== 'idle');
+    }).catch(() => {});
   }
 
   function ensureOverlay() {
@@ -187,6 +201,7 @@
     // Del visor incrustado: cerrar con Esc.
     if (cache && e.source === cache.iframe.contentWindow) {
       if (e.data.sie === 'viewer-close' && state === 'open') close();
+      if (e.data.sie === 'update-dismissed') checkUpdate();
       return;
     }
     if (!isOnbmc(e.origin) || state !== 'loading') return;
@@ -219,7 +234,7 @@
       a.id = ICON_ID;
       a.setAttribute('role', 'button');
       a.tabIndex = 0;
-      a.innerHTML = SVG_CLIP + SVG_BACK;
+      a.innerHTML = SVG_CLIP + SVG_BACK + '<span class="sie-dot" aria-hidden="true"></span>';
       a.addEventListener('click', onIconClick);
       a.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onIconClick(); } });
       search.parentElement.insertBefore(a, search);
@@ -231,4 +246,8 @@
 
   ensureIcon();
   setInterval(ensureIcon, 1500);
+  checkUpdate();
+  setInterval(checkUpdate, 60 * 60 * 1000);
+  // Al volver del visor (p. ej. tras ocultar el aviso con la ✕), se refresca el estado.
+  window.addEventListener('focus', checkUpdate);
 })();

@@ -710,4 +710,18 @@
       setTimeout(() => { label.textContent = 'Descargar .zip'; btn.disabled = false; }, 1800);
     }
   };
+
+  // ---------- aviso de versión nueva ----------
+  chrome.runtime.sendMessage({ type: 'update-info' }).then(info => {
+    if (!info || !info.available || info.dismissed) return;
+    $('update-version').textContent = `Versión nueva disponible: ${info.remote}`;
+    $('update-installed').textContent = `(tienes la ${info.installed})`;
+    $('update-link').href = `${info.repo}#instalación`;
+    $('update').hidden = false;
+    $('update-close').onclick = () => {
+      $('update').hidden = true;
+      chrome.runtime.sendMessage({ type: 'update-dismiss', version: info.remote })
+        .then(() => { if (window.top !== window) parent.postMessage({ sie: 'update-dismissed' }, '*'); });
+    };
+  }).catch(() => {});
 })();
