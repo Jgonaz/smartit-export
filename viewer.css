@@ -211,6 +211,15 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--card); color: var(--ink); border: var(--bw) solid var(--border); box-shadow: 4px 4px 0 var(--mint); padding: 10px 18px; border-radius: 10px; font-weight: 600; z-index: 60; }
 
+/* volver arriba: aparece cuando la ficha ya ha pasado por arriba */
+.to-top { position: fixed; z-index: 20; bottom: 32px; right: max(40px, calc((100vw - 1360px) / 2 + 40px)); width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border: var(--bw) solid var(--border); border-radius: 12px; background: var(--card); color: var(--ink); box-shadow: 4px 4px 0 var(--lilac); cursor: pointer; opacity: 0; transform: translateY(14px) scale(.9); pointer-events: none; transition: opacity .22s ease, transform .3s cubic-bezier(.2,.8,.2,1.2), box-shadow .12s ease; }
+.to-top.show { opacity: 1; transform: none; pointer-events: auto; }
+.to-top.show:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--lilac); }
+.to-top.show:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--lilac); }
+.to-top .ico { width: 20px; height: 20px; stroke-width: 2; }
+.to-top.go .ico { animation: to-top-go .45s cubic-bezier(.3,.7,.2,1); }
+@keyframes to-top-go { 40% { transform: translateY(-6px); opacity: .4; } 41% { transform: translateY(8px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
 /* Dentro de SmartIT: ya estás en SmartIT, sobra el enlace para abrirlo. */
 body.embedded #source { display: none !important; }
 

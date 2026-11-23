@@ -778,6 +778,30 @@
     }, true);
   }
 
+  // ---------- volver arriba ----------
+  (() => {
+    const btn = $('to-top');
+    btn.hidden = false; // se muestra/oculta con la clase .show para poder animarlo
+    // Referencia: la parte de arriba de la Ficha; si no está, la última tarjeta visible del lateral.
+    const anchor = () => [$('fields-card'), $('res-card'), $('files-card'), $('time-card')].find(n => n && !n.hidden);
+    let shown = false, ticking = false;
+    const check = () => {
+      ticking = false;
+      const a = anchor();
+      const show = a ? a.getBoundingClientRect().top < 0 : window.scrollY > 600;
+      if (show !== shown) { shown = show; btn.classList.toggle('show', show); btn.tabIndex = show ? 0 : -1; }
+    };
+    window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(check); } }, { passive: true });
+    window.addEventListener('resize', check);
+    btn.tabIndex = -1;
+    btn.addEventListener('click', () => {
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      btn.classList.remove('go'); void btn.offsetWidth; btn.classList.add('go');
+      window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+    });
+    check();
+  })();
+
   let toastTimer;
   $('copy').onclick = async () => {
     await navigator.clipboard.writeText(buildText());
