@@ -53,7 +53,8 @@
       "resources": [
         "viewer.html",
         "viewer.js",
-        "viewer.css"
+        "viewer.css",
+        "theme.js"
       ],
       "matches": [
         "https://*.onbmc.com/*"

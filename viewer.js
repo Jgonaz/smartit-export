@@ -463,7 +463,7 @@
         counts[k] = (counts[k] || 0) + 1;
         const li = el('li', 'team');
         const card = el('div', 'team-box');
-        card.style.setProperty('--tc', TEAM_COLORS[distinct.indexOf(k) % TEAM_COLORS.length]);
+        card.style.setProperty('--tc', `var(--team-${distinct.indexOf(k) % 8})`); // colores por tema (claro/oscuro)
         const step = el('div', 'team-step');
         if (s.reopened) step.appendChild(Object.assign(el('span', 'team-reopen', 'reabierta'), { title: 'La incidencia se reabrió en este paso' }));
         else if (counts[k] > 1) step.appendChild(Object.assign(el('span', 'team-repeat', `${counts[k]}ª vez`), { title: 'Vuelve a un equipo por el que ya pasó' }));
@@ -663,7 +663,8 @@
       if (ev.key !== 'Escape') return;
       const modalOpen = !$('modal').hidden;
       const popOpen = document.querySelector('.origin-pop') && !document.querySelector('.origin-pop').hidden;
-      if (!modalOpen && !popOpen) parent.postMessage({ sie: 'viewer-close' }, '*');
+      const menuOpen = !$('settings-menu').hidden;
+      if (!modalOpen && !popOpen && !menuOpen) parent.postMessage({ sie: 'viewer-close' }, '*');
     }, true);
   }
 
@@ -772,4 +773,32 @@
         .then(() => { if (window.top !== window) parent.postMessage({ sie: 'update-dismissed' }, '*'); });
     };
   }).catch(() => {});
+
+  // ---------- ajustes: tema claro / oscuro / sistema ----------
+  const mq = matchMedia('(prefers-color-scheme: dark)');
+  let themePref = 'light';
+  function applyTheme() {
+    const dark = themePref === 'dark' || (themePref === 'system' && mq.matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    document.querySelectorAll('[data-theme-pref]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themePref === themePref)));
+    try { localStorage.setItem('sie-theme', themePref); } catch (_) {}
+  }
+  chrome.storage.local.get('theme').then(r => { themePref = r.theme || 'light'; applyTheme(); }).catch(() => applyTheme());
+  mq.addEventListener('change', () => { if (themePref === 'system') applyTheme(); });
+  try {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.theme) { themePref = changes.theme.newValue || 'light'; applyTheme(); }
+    });
+  } catch (_) {}
+  document.querySelectorAll('[data-theme-pref]').forEach(b => b.addEventListener('click', () => {
+    themePref = b.dataset.themePref;
+    applyTheme();
+    chrome.storage.local.set({ theme: themePref });
+  }));
+  const settingsBtn = $('settings-btn');
+  const settingsMenu = $('settings-menu');
+  const setMenu = open => { settingsMenu.hidden = !open; settingsBtn.setAttribute('aria-expanded', String(open)); };
+  settingsBtn.addEventListener('click', ev => { ev.stopPropagation(); setMenu(settingsMenu.hidden); });
+  document.addEventListener('click', ev => { if (!settingsMenu.hidden && !ev.target.closest('.settings')) setMenu(false); });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !settingsMenu.hidden) setMenu(false); }, true);
 })();

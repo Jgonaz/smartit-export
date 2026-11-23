@@ -48,8 +48,23 @@
     #${OVERLAY_ID} iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent;opacity:0;transform:translateY(10px);
       transition:opacity ${T(380)}ms ease, transform ${T(420)}ms cubic-bezier(.2,.7,.2,1)}
     #${OVERLAY_ID} iframe.on{opacity:1;transform:none}
+    #${OVERLAY_ID}.dark{background:#0F1115}
+    #${OVERLAY_ID}.dark .sie-status{color:#AEB4C2}
+    #${OVERLAY_ID}.dark .sie-spinner{border-color:#262A33;border-top-color:#8B9BFF}
+    #${OVERLAY_ID}.dark .sie-err-ico{background:#3A1515;color:#F59A93}
     @keyframes sie-spin{to{transform:rotate(360deg)}}`;
   document.documentElement.appendChild(style);
+
+  // Tema del visor (claro/oscuro/sistema), para que la capa se funda al color correcto.
+  let themePref = 'light';
+  const mqDark = window.matchMedia('(prefers-color-scheme: dark)');
+  const isDark = () => themePref === 'dark' || (themePref === 'system' && mqDark.matches);
+  try {
+    chrome.storage.local.get('theme').then(r => { themePref = r.theme || 'light'; paintTheme(); }).catch(() => {});
+    chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch.theme) { themePref = ch.theme.newValue || 'light'; paintTheme(); } });
+  } catch (_) { /* sin acceso al almacenamiento: tema claro */ }
+  mqDark.addEventListener('change', () => paintTheme());
+  function paintTheme() { if (overlay) overlay.classList.toggle('dark', isDark()); }
 
   // Estado: idle (SmartIT visible) | loading (analizando) | open (visor visible)
   let state = 'idle';
@@ -87,6 +102,7 @@
     statusEl = overlay.querySelector('.sie-status');
     textEl = overlay.querySelector('.sie-text');
     document.body.appendChild(overlay);
+    paintTheme();
     placeOverlay();
     window.addEventListener('resize', placeOverlay);
   }

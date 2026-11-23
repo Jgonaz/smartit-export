@@ -21,6 +21,7 @@ Abre una incidencia y pulsa el icono 📋 de la cabecera de SmartIT, a la izquie
 
 - La información de la incidencia con formato, con el enlace «Pulsa aquí para copiar el markdown completo», el selector Vista / Markdown y opciones para incluir o quitar los eventos automáticos (cambios de estado, asignaciones…) y los datos de la ficha.
 - Si la incidencia tiene un resumen de HelixGPT, se muestra completo encima de la descripción y se incluye al principio del Markdown.
+- Engranaje de ajustes (arriba a la derecha del visor): tema claro, oscuro o el del sistema.
 - «Descargar .zip»: descarga `<incidencia>.zip` con el `incidencia.md` y todos los adjuntos en `adjuntos/`, enlazados desde el Markdown.
 - Si la incidencia ha pasado por varios equipos o se ha reabierto, se muestra su recorrido, indicando en qué paso se cerró, se reabrió y cuál es el actual.
 - Al final, el carrusel con todos los adjuntos.
