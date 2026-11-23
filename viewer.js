@@ -483,41 +483,44 @@
     const durs = teamSteps.map((s, i) => (i < teamSteps.length - 1 ? toTs(teamSteps[i + 1].date) : endTs) - toTs(s.date));
     const longest = teamSteps.length > 1 ? durs.slice(0, -1).indexOf(Math.max(...durs.slice(0, -1))) : -1;
     const sizes = rowSizes(teamSteps.length);
-    // Flecha de continuación: punta dibujada con el mismo borde que la vía.
-    const arrow = (cls, color) => {
+    // Flecha de continuación (fuera de la vía): marca que la línea sigue en la fila siguiente.
+    const arrow = cls => {
       const a = el('div', 'm-arrow ' + cls);
-      a.innerHTML = '<svg viewBox="0 0 16 24" aria-hidden="true"><path d="M1 1 L15 12 L1 23 Z"/></svg>';
-      a.style.setProperty('--c', color);
+      a.innerHTML = '<svg viewBox="0 0 48 12" aria-hidden="true"><path d="M1 6H44"/><path d="M38 1.5L46 6L38 10.5Z" class="hd"/></svg>';
       return a;
     };
     const durLabel = (k, left) => {
       const d = el('div', 'm-dur' + (k === longest ? ' long' : ''), fmtDur(Math.max(0, durs[k])));
-      d.style.left = `${left}%`;
+      d.style.left = left;
       return d;
     };
     let i = 0;
     sizes.forEach((size, r) => {
       const row = el('div', 'metro-row');
       const hasIn = r > 0, hasOut = r < sizes.length - 1;
-      const L = hasIn ? 17 : 7, R = hasOut ? 83 : 93;
-      const pos = j => size === 1 ? (hasIn || hasOut ? (L + R) / 2 : 50) : L + j * ((R - L) / (size - 1));
+      const L = hasIn ? 9 : 7, R = hasOut ? 91 : 93;
+      const pos = j => size === 1 ? 50 : L + j * ((R - L) / (size - 1));
       const start = i;
-      // Tramos: [entrada] + entre estaciones + [salida]; el primero y el último cierran la vía.
-      const segs = [];
-      if (hasIn) segs.push({ from: 2.2, to: pos(0), color: teamColor(teamSteps[start - 1].group), dur: start - 1, cls: 'in' });
-      for (let j = 0; j < size - 1; j++) segs.push({ from: pos(j), to: pos(j + 1), color: teamColor(teamSteps[start + j].group), dur: start + j });
-      if (hasOut) segs.push({ from: pos(size - 1), to: 97.6, color: teamColor(teamSteps[start + size - 1].group), cls: 'out' });
-      segs.forEach((g, k) => {
-        const first = k === 0 && g.cls !== 'in', last = k === segs.length - 1 && g.cls !== 'out';
+      for (let j = 0; j < size - 1; j++) {
+        const first = j === 0, last = j === size - 2;
         const seg = el('div', 'm-seg' + (first ? ' first' : '') + (last ? ' last' : ''));
-        seg.style.left = `calc(${g.from}% - ${first ? 6 : 0}px)`;
-        seg.style.width = `calc(${g.to - g.from}% + ${(first ? 6 : 0) + (last ? 6 : 0)}px)`;
-        seg.style.background = g.color;
+        seg.style.left = `calc(${pos(j)}% - ${first ? 6 : 0}px)`;
+        seg.style.width = `calc(${pos(j + 1) - pos(j)}% + ${(first ? 6 : 0) + (last ? 6 : 0)}px)`;
+        seg.style.background = teamColor(teamSteps[start + j].group);
         row.appendChild(seg);
-        if (g.dur != null) row.appendChild(durLabel(g.dur, g.cls === 'in' ? (g.from + g.to) / 2 + 1 : (g.from + g.to) / 2));
-        if (g.cls === 'out') { const a = arrow('out', g.color); a.style.left = `${g.to}%`; row.appendChild(a); }
-        if (g.cls === 'in') { const a = arrow('in', g.color); a.style.left = `${g.from}%`; row.appendChild(a); }
-      });
+        row.appendChild(durLabel(start + j, `${(pos(j) + pos(j + 1)) / 2}%`));
+      }
+      if (hasOut) {
+        const a = arrow('out'); a.style.left = `calc(${pos(size - 1)}% + 24px)`;
+        a.title = `Sigue en ${teamSteps[start + size].group} (${fmtDur(Math.max(0, durs[start + size - 1]), true)})`;
+        row.appendChild(a);
+      }
+      if (hasIn) {
+        const a = arrow('in'); a.style.left = `calc(${pos(0)}% - 72px)`;
+        // El tiempo entre la última estación de la fila anterior y la primera de esta va en el tooltip.
+        a.title = `Viene de ${teamSteps[start - 1].group} (${fmtDur(Math.max(0, durs[start - 1]), true)})`;
+        row.appendChild(a);
+      }
       for (let j = 0; j < size; j++, i++) {
         const s = teamSteps[i];
         const isNow = i === teamSteps.length - 1 && !closedNow;
