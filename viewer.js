@@ -57,6 +57,72 @@
   document.body.appendChild(pop);
   const fmtSize = n => !n ? '' : n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`;
   let popFor = null;
+
+  // ---------- contexto de cada adjunto ----------
+  const toTs = s => {
+    const m = (s || '').match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+    return m ? new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +m[6]).getTime() : 0;
+  };
+  // Notas automáticas que solo dicen "Attachment for an incident entry - a.png, b.jpg".
+  const isGenericBody = (body, names) => {
+    const b = (body || '').trim();
+    if (!b) return true;
+    if (/^(attachment for|adjunto)/i.test(b)) return true;
+    let rest = b;
+    names.forEach(n => { rest = rest.split(n).join(''); });
+    return rest.replace(/[\s,;.\-–]+/g, '').length < 8;
+  };
+  const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Fragmento alrededor de una mención: el texto que la precede (hasta ~450 caracteres,
+  // empezando en un inicio de línea) y la línea de la propia mención.
+  function snippetAround(text, idx, len) {
+    let from = Math.max(0, idx - 450);
+    if (from > 0) {
+      const nl = text.indexOf('\n', from);
+      if (nl >= 0 && nl < idx) from = nl + 1;
+    }
+    const endLine = text.indexOf('\n', idx + len);
+    const to = endLine < 0 ? text.length : endLine;
+    const s = text.slice(from, to).replace(/\n{3,}/g, '\n\n').trim();
+    return (from > 0 ? '…' : '') + s;
+  }
+  function findMentions(a) {
+    const stem = a.name.replace(/\.[^.]+$/, '');
+    const stems = [...new Set([a.name, stem, stem.replace(/\s*\(\d+\)$/, '')])].filter(s => s.length >= 4);
+    const sources = [{ label: 'Descripción de la incidencia', text: data.description || '' }];
+    (data.activity || []).forEach(e => {
+      if (e === a.entry || !e.body) return;
+      sources.push({ label: `Nota del ${e.date}${e.author ? ' · ' + e.author : ''}`, text: e.body });
+    });
+    const found = [];
+    for (const src of sources) {
+      for (const s of stems) {
+        const m = new RegExp(escRe(s) + '(?![\\w])', 'i').exec(src.text);
+        if (m) { found.push({ label: `Mencionada en: ${src.label}`, text: snippetAround(src.text, m.index, m[0].length) }); break; }
+      }
+    }
+    return found;
+  }
+  // Notas con texto real escritas casi a la vez (±2 min) que la nota del adjunto.
+  function sameMomentNotes(a) {
+    const e = a.entry || {};
+    const t = toTs(e.date);
+    if (!t) return [];
+    return (data.activity || [])
+      .filter(o => o !== e && o.body && Math.abs(toTs(o.date) - t) <= 120000 &&
+        !isGenericBody(o.body, (o.attachments || []).map(x => x.name)))
+      .map(o => ({ label: `Nota del mismo momento (${o.date}${o.author ? ' · ' + o.author : ''})`, text: o.body }));
+  }
+  function attachmentContext(a) {
+    const e = a.entry || {};
+    const names = (e.attachments || []).map(x => x.name);
+    const ctx = [];
+    if (!isGenericBody(e.body, names)) ctx.push({ label: 'Comentario de la nota', text: e.body.trim() });
+    ctx.push(...findMentions(a), ...sameMomentNotes(a));
+    return ctx;
+  }
+  const clip = (s, n) => (s.length > n ? s.slice(0, n) + '…' : s);
+
   function showOrigin(a, anchor) {
     if (popFor === a && !pop.hidden) { pop.hidden = true; popFor = null; return; }
     const e = a.entry || {};
@@ -69,16 +135,28 @@
       ['ID de la nota', e.id],
       ['Archivo', [a.name, fmtSize(a.size)].filter(Boolean).join(' · ')]
     ].filter(([, v]) => v);
-    pop.innerHTML = '<dl></dl><div class="pop-body"></div>';
+    pop.innerHTML = '<dl></dl>';
     const dl = pop.querySelector('dl');
     rows.forEach(([k, v]) => {
       const dt = document.createElement('dt'); dt.textContent = k;
       const dd = document.createElement('dd'); dd.textContent = v;
       dl.append(dt, dd);
     });
-    const body = (e.body || '').trim();
-    const pb = pop.querySelector('.pop-body');
-    if (body) pb.textContent = body.length > 600 ? body.slice(0, 600) + '…' : body; else pb.remove();
+    const ctx = attachmentContext(a);
+    if (!ctx.length) {
+      const none = document.createElement('div');
+      none.className = 'pop-body muted';
+      none.textContent = 'La nota no tiene comentario y el archivo no se menciona en la descripción ni en otras notas.';
+      pop.appendChild(none);
+    }
+    ctx.forEach(c => {
+      const sec = document.createElement('div');
+      sec.className = 'pop-body';
+      const h = document.createElement('div'); h.className = 'pop-h'; h.textContent = c.label;
+      const t = document.createElement('div'); t.textContent = clip(c.text, 700);
+      sec.append(h, t);
+      pop.appendChild(sec);
+    });
     pop.hidden = false;
     const r = anchor.getBoundingClientRect();
     const w = pop.offsetWidth;
@@ -182,7 +260,10 @@
     });
     if (attachments.length) {
       L.push('', '## Adjuntos');
-      attachments.forEach(a => L.push(`- ${a.name} (${a.date}, ${a.author})`));
+      attachments.forEach(a => {
+        const where = findMentions(a).map(m => m.label.replace(/^Mencionada en: /, ''));
+        L.push(`- ${a.name} (${a.date}, ${a.author})${where.length ? ` — mencionado en: ${where.join('; ')}` : ''}`);
+      });
     }
     return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
   }

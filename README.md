@@ -2,7 +2,7 @@
 
 Extensión de Chrome para **BMC Helix SmartIT** (vista Helix Progressive Views) que reúne en una sola pantalla toda la información de una incidencia:
 
-- **Adjuntos** en un carrusel, sin tener que descargarlos. Al pulsar una imagen se abre a pantalla completa; los PDF y textos se abren en una pestaña nueva. Cada adjunto tiene un botón ⓘ que indica de qué nota sale (tipo, autor, fecha, visibilidad y texto).
+- **Adjuntos** en un carrusel, sin tener que descargarlos. Al pulsar una imagen se abre a pantalla completa; los PDF y textos se abren en una pestaña nueva. Cada adjunto tiene un botón ⓘ que indica de qué nota sale (tipo, autor, fecha, visibilidad) y su contexto: el comentario de la nota, dónde se menciona el archivo (descripción u otras notas) y las notas escritas en el mismo momento.
 - **Toda la incidencia en texto** (Markdown) lista para copiar y pegar en un agente o en cualquier otro sitio: cabecera, URL, descripción completa, datos de la ficha y **todas** las páginas de la actividad en orden cronológico.
 
 Nace porque la actividad de SmartIT está paginada y ya no se puede copiar entera con Ctrl+C / Ctrl+V, y los adjuntos solo se pueden descargar.
