@@ -422,12 +422,38 @@
     });
   }
 
+  // Previsualización de un adjunto (imagen) que abre la vista a pantalla completa.
+  function previewEl(i, size) {
+    const a = attachments[i];
+    const src = imgSrc(a);
+    if (!src) return null;
+    const b = el('button', 'preview ' + size);
+    b.type = 'button';
+    b.title = `Ver ${a.name} a pantalla completa`;
+    const img = el('img'); img.alt = a.name; img.src = src; img.loading = 'lazy';
+    const cap = el('span', 'cap'); cap.innerHTML = ICON.image; cap.append(a.name);
+    b.append(img, cap);
+    b.addEventListener('click', () => openModal(i));
+    return b;
+  }
+  // Si un párrafo es solo la mención de una imagen (p. ej. "image002"), devuelve su índice.
+  function soleMention(par) {
+    const t = par.trim().toLowerCase();
+    const hit = mentionList.find(m => m.s.toLowerCase() === t);
+    return hit ? hit.i : -1;
+  }
+
   function renderDescription() {
     const box = $('desc');
     box.textContent = '';
     const text = (data.description || '').trim();
     $('desc-card').hidden = !text;
-    text.split(/\n{2,}/).forEach(par => { const p = el('p'); richText(p, par.trim()); box.appendChild(p); });
+    text.split(/\n{2,}/).forEach(par => {
+      const i = soleMention(par);
+      const pv = i >= 0 ? previewEl(i, 'lg') : null;
+      if (pv) { const d = el('div'); d.appendChild(pv); box.appendChild(d); return; }
+      const p = el('p'); richText(p, par.trim()); box.appendChild(p);
+    });
   }
 
   function renderTimeline() {
@@ -454,11 +480,16 @@
         if (e.access) who.appendChild(el('span', 'tag ' + (/p[uú]blic/i.test(e.access) ? 'pub' : 'priv'), e.access));
         head.append(who, el('time', '', shortDate(e.date)));
         card.appendChild(head);
-        if (e.body) { const p = el('p', 'note-text'); richText(p, e.body); card.appendChild(p); }
+        // Las notas automáticas tipo "Attachment for an incident entry - a.png…" no aportan: ya se ven las previsualizaciones.
+        const generic = (e.attachments || []).length && isGenericBody(e.body, e.attachments.map(x => x.name));
+        if (e.body && !generic) { const p = el('p', 'note-text'); richText(p, e.body); card.appendChild(p); }
         if ((e.attachments || []).length) {
+          const thumbs = el('div', 'thumbs');
           const files = el('div', 'files');
           e.attachments.forEach(at => {
             const idx = attachments.findIndex(x => x.entry === e && x.slot === at.slot);
+            const pv = idx >= 0 ? previewEl(idx, 'sm') : null;
+            if (pv) { thumbs.appendChild(pv); return; }
             const chip = el('button', 'file-chip');
             chip.type = 'button';
             chip.innerHTML = ICON.clip;
@@ -466,7 +497,8 @@
             chip.addEventListener('click', () => idx >= 0 && openModal(idx));
             files.appendChild(chip);
           });
-          card.appendChild(files);
+          if (thumbs.childNodes.length) card.appendChild(thumbs);
+          if (files.childNodes.length) card.appendChild(files);
         }
         body.appendChild(card);
       } else {
