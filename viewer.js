@@ -1,6 +1,9 @@
 (async () => {
   'use strict';
   const $ = id => document.getElementById(id);
+  // Incrustado dentro de SmartIT (iframe) en vez de en una pestaña propia.
+  const embedded = window.top !== window;
+  if (embedded) document.body.classList.add('embedded');
   const key = location.hash.slice(1);
   const store = await chrome.storage.local.get(key);
   const data = store[key];
@@ -550,6 +553,17 @@
   $('mode-md').onclick = () => { mode = 'md'; render(); };
   renderDescription();
   render();
+  if (embedded) {
+    // Avisa a SmartIT de que el visor ya está pintado (para mostrarlo con la animación).
+    requestAnimationFrame(() => parent.postMessage({ sie: 'viewer-ready' }, '*'));
+    // Esc vuelve a SmartIT, salvo que haya abierta una imagen a pantalla completa o el recuadro ⓘ.
+    document.addEventListener('keydown', ev => {
+      if (ev.key !== 'Escape') return;
+      const modalOpen = !$('modal').hidden;
+      const popOpen = document.querySelector('.origin-pop') && !document.querySelector('.origin-pop').hidden;
+      if (!modalOpen && !popOpen) parent.postMessage({ sie: 'viewer-close' }, '*');
+    }, true);
+  }
 
   let toastTimer;
   $('copy').onclick = async () => {

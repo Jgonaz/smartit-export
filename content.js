@@ -192,7 +192,7 @@
     const byId = new Map();
     let page = 1;
     for (let guard = 0; guard < 200; guard++) {
-      onProgress && onProgress(`Leyendo actividad… página ${page}`);
+      onProgress && onProgress(`Analizando incidencia: página ${page}...`);
       await waitFor(() => iframesReady(root), 15000);
       for (const f of feedIframes(root)) {
         try {
@@ -335,7 +335,7 @@
         console.warn('[SmartIT export] no se obtuvieron las claves de', e.id, err);
       }
       for (const a of e.attachments) {
-        onProgress && onProgress(`Cargando adjuntos… ${++i}/${total}`);
+        onProgress && onProgress(`Cargando adjuntos: ${++i} de ${total}...`);
         const key = keys[SLOT_FIELD[a.slot]];
         try {
           if (!key || !key.payload) throw new Error('sin clave de descarga');
@@ -351,19 +351,20 @@
   // ---------- botón ----------
   let running = false;
 
-  // ui: { progress(text), done(), error(text) }; sourceUrl: URL de la incidencia en SmartIT.
-  async function runExport(ui, sourceUrl) {
+  // ui: { progress(text), done(id), error(text) }; sourceUrl: URL de la incidencia en SmartIT.
+  // inline: true -> el visor se mostrará dentro de SmartIT (no se abre pestaña nueva).
+  async function runExport(ui, sourceUrl, inline) {
     if (running) return;
     running = true;
     const progress = t => ui.progress(t);
     try {
-      progress('Leyendo ficha…');
+      progress('Analizando incidencia...');
       const header = collectHeader();
       const description = collectDescription();
       const fields = collectFields();
       const activity = await collectActivity(progress);
       await loadAttachments(activity.entries, progress);
-      progress('Abriendo visor…');
+      progress('Preparando la vista...');
       const data = {
         version: 1,
         exportedAt: new Date().toISOString(),
@@ -372,9 +373,9 @@
         activity: activity.entries,
         activityStatus: activity.status
       };
-      const res = await chrome.runtime.sendMessage({ type: 'open-viewer', data });
+      const res = await chrome.runtime.sendMessage({ type: 'open-viewer', data, inline: !!inline });
       if (!res || !res.ok) throw new Error(res && res.error || 'sin respuesta');
-      ui.done();
+      ui.done(res.id);
     } catch (e) {
       console.error('[SmartIT export]', e);
       ui.error(String(e.message || e));
@@ -389,13 +390,13 @@
   window.addEventListener('message', e => {
     if (!e.data || e.data.sie !== 'export' || e.source !== window.parent) return;
     if (!/^https:\/\/[\w.-]+\.onbmc\.com$/.test(e.origin) || !isTicket() || running) return;
-    const reply = (sie, text) => { try { e.source.postMessage({ sie, text }, e.origin); } catch (_) {} };
+    const reply = (sie, extra) => { try { e.source.postMessage(Object.assign({ sie }, extra), e.origin); } catch (_) {} };
     reply('started');
     runExport({
-      progress: t => reply('progress', t),
-      done: () => reply('done'),
-      error: t => reply('error', t)
-    }, e.data.url);
+      progress: text => reply('progress', { text }),
+      done: id => reply('done', { id }),
+      error: text => reply('error', { text })
+    }, e.data.url, !!e.data.inline);
   });
 
   // 2) Vista Helix abierta directamente (sin SmartIT alrededor): botón flotante.

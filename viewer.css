@@ -5,6 +5,8 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+/* Dentro de SmartIT: ya estás en SmartIT, sobra el botón de abrirlo. */
+body.embedded #source { display: none !important; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 Inter, "Segoe UI", system-ui, sans-serif; }
 .wrap { max-width: 1320px; margin: 0 auto; padding-left: 40px; padding-right: 40px; }
 .ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
