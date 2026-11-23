@@ -7,7 +7,7 @@
 :root {
   color-scheme: light;
   --bg: #FBFBFA; --card: #FFFFFF; --ink: #161616; --grey: #5E5E5E; --faint: #8A8A8A; --hair: #ECECEC;
-  --border: #161616; --bw: 1.5px;
+  --border: #161616; --bw: 1.5px; --arrow: #A8A8A8;
   --pink: #E8B4CF; --salmon: #F5A28A; --lilac: #C7B8F0; --mint: #A9DCC6; --butter: #F3D27F; --sky: #A9CDEB;
   --wait: #B23A1B; --wait-bg: #FDE7DF;
   --cust-bubble: #FFFFFF; --bubble: #FFFFFF;
@@ -17,7 +17,7 @@
 html[data-theme="dark"] {
   color-scheme: dark;
   --bg: #121419; --card: #1B1E25; --ink: #EEF0F4; --grey: #A3A9B5; --faint: #7D8492; --hair: #2B2F38;
-  --border: #C9CDD6;
+  --border: #C9CDD6; --arrow: #6E7584;
   --pink: #C98FAE; --salmon: #D98770; --lilac: #A897D6; --mint: #82BBA3; --butter: #CFAE5C; --sky: #86AED0;
   --wait: #FF9C7A; --wait-bg: #3A1F17;
   --bubble: #1B1E25;
@@ -80,10 +80,9 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .m-seg.first { border-left: var(--bw) solid var(--border); border-radius: 6px 0 0 6px; }
 .m-seg.last { border-right: var(--bw) solid var(--border); border-radius: 0 6px 6px 0; }
 .m-seg.first.last { border-radius: 6px; }
-.m-arrow { position: absolute; top: 58px; width: 48px; height: 12px; }
-.m-arrow svg { display: block; width: 48px; height: 12px; overflow: visible; }
-.m-arrow path { fill: none; stroke: var(--grey); stroke-width: 2.2; stroke-linecap: round; }
-.m-arrow path.hd { fill: var(--grey); stroke-width: 1.2; stroke-linejoin: round; }
+.m-arrow { position: absolute; top: 57px; width: 10px; height: 14px; }
+.m-arrow svg { display: block; width: 10px; height: 14px; overflow: visible; }
+.m-arrow path { fill: none; stroke: var(--arrow); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .m-dur { position: absolute; top: 78px; transform: translateX(-50%); font-family: var(--mono); font-size: 12px; font-weight: 700; white-space: nowrap; }
 .m-dur.long { color: var(--wait); }
 .m-st { position: absolute; top: 0; --w: 200px; width: var(--w); margin-left: calc(var(--w) / -2); display: flex; flex-direction: column; align-items: center; text-align: center; }

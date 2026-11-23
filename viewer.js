@@ -486,7 +486,7 @@
     // Flecha de continuación (fuera de la vía): marca que la línea sigue en la fila siguiente.
     const arrow = cls => {
       const a = el('div', 'm-arrow ' + cls);
-      a.innerHTML = '<svg viewBox="0 0 48 12" aria-hidden="true"><path d="M1 6H44"/><path d="M38 1.5L46 6L38 10.5Z" class="hd"/></svg>';
+      a.innerHTML = '<svg viewBox="0 0 10 14" aria-hidden="true"><path d="M2 1.5L8 7L2 12.5"/></svg>';
       return a;
     };
     const durLabel = (k, left) => {
@@ -511,12 +511,12 @@
         row.appendChild(durLabel(start + j, `${(pos(j) + pos(j + 1)) / 2}%`));
       }
       if (hasOut) {
-        const a = arrow('out'); a.style.left = `calc(${pos(size - 1)}% + 24px)`;
+        const a = arrow('out'); a.style.left = `calc(${pos(size - 1)}% + 22px)`;
         a.title = `Sigue en ${teamSteps[start + size].group} (${fmtDur(Math.max(0, durs[start + size - 1]), true)})`;
         row.appendChild(a);
       }
       if (hasIn) {
-        const a = arrow('in'); a.style.left = `calc(${pos(0)}% - 72px)`;
+        const a = arrow('in'); a.style.left = `calc(${pos(0)}% - 32px)`;
         // El tiempo entre la última estación de la fila anterior y la primera de esta va en el tooltip.
         a.title = `Viene de ${teamSteps[start - 1].group} (${fmtDur(Math.max(0, durs[start - 1]), true)})`;
         row.appendChild(a);
