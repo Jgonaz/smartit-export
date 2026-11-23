@@ -300,9 +300,11 @@ html[data-style="classic"] .summary-card { border-color: var(--helix-line); back
 html[data-style="classic"] .summary-card .card-h { color: var(--helix); }
 
 /* conversación */
-html[data-style="classic"] .bubble { border: 1px solid color-mix(in srgb, var(--sh) 26%, var(--border)); background: color-mix(in srgb, var(--sh) 5%, var(--card)); box-shadow: none; border-radius: 12px; }
-html[data-style="classic"] .msg.r .bubble { border-top-right-radius: 4px; }
+html[data-style="classic"] .bubble { background: var(--card); border: 1px solid color-mix(in srgb, var(--sh) 40%, var(--border)); border-radius: 12px; box-shadow: inset 3px 0 0 var(--sh), 0 1px 2px rgba(20, 22, 27, .04); }
+html[data-style="classic"] .msg.r .bubble { border-top-right-radius: 4px; box-shadow: inset -3px 0 0 var(--sh), 0 1px 2px rgba(20, 22, 27, .04); }
 html[data-style="classic"] .msg:not(.r) .bubble { border-top-left-radius: 4px; }
+html[data-style="classic"][data-theme="dark"] .bubble { box-shadow: inset 3px 0 0 var(--sh); }
+html[data-style="classic"][data-theme="dark"] .msg.r .bubble { box-shadow: inset -3px 0 0 var(--sh); }
 html[data-style="classic"] .bubble-title { font-weight: 600; color: var(--grey); }
 html[data-style="classic"] .handoff span { border: 1px solid var(--border); font-weight: 500; }
 html[data-style="classic"] .handoff .swatch { border: 0; width: 10px; height: 10px; border-radius: 50%; }
