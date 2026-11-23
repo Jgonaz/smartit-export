@@ -929,6 +929,26 @@
     applyTheme();
     chrome.storage.local.set({ theme: themePref });
   }));
+  // ---------- ajustes: estilo Tarjetas / Clásico ----------
+  let stylePref = 'cards';
+  function applyStyle() {
+    if (stylePref === 'classic') document.documentElement.dataset.style = 'classic';
+    else delete document.documentElement.dataset.style;
+    document.querySelectorAll('[data-style-pref]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.stylePref === stylePref)));
+    try { localStorage.setItem('sie-style', stylePref); } catch (_) {}
+  }
+  chrome.storage.local.get('style').then(r => { stylePref = r.style === 'classic' ? 'classic' : 'cards'; applyStyle(); }).catch(() => applyStyle());
+  try {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.style) { stylePref = changes.style.newValue === 'classic' ? 'classic' : 'cards'; applyStyle(); }
+    });
+  } catch (_) {}
+  document.querySelectorAll('[data-style-pref]').forEach(b => b.addEventListener('click', () => {
+    stylePref = b.dataset.stylePref;
+    applyStyle();
+    chrome.storage.local.set({ style: stylePref });
+  }));
+
   const settingsBtn = $('settings-btn');
   const settingsMenu = $('settings-menu');
   const setMenu = open => { settingsMenu.hidden = !open; settingsBtn.setAttribute('aria-expanded', String(open)); };

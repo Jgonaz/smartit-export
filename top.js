@@ -83,25 +83,48 @@
     #${OVERLAY_ID}.dark .sie-card{border-color:#C9CDD6}
     #${OVERLAY_ID}.dark .sie-ring .out{stroke:#C9CDD6}
     #${OVERLAY_ID}.dark .sie-err-ico{border-color:#C9CDD6}
+    #${OVERLAY_ID}.classic{background:#F4F5F8;--ink:#14161B;--card:#FFFFFF;--grey:#6B7180;--salmon:#2E44C7;--mint:#146C3A;--trk:#E4E6EC}
+    #${OVERLAY_ID}.classic.dark{background:#0F1115;--ink:#ECEEF3;--card:#171A21;--grey:#8E95A5;--salmon:#8B9BFF;--mint:#6FD39A;--trk:#262A33}
+    #${OVERLAY_ID}.classic .sie-card, #${OVERLAY_ID}.classic.dark .sie-card{border:1px solid #E4E6EC;box-shadow:0 1px 2px rgba(20,22,27,.04),0 2px 10px rgba(20,22,27,.05);font-family:"SIE Inter",Inter,"Segoe UI",system-ui,sans-serif}
+    #${OVERLAY_ID}.classic.dark .sie-card{border-color:#262A33;box-shadow:0 1px 0 rgba(0,0,0,.35)}
+    #${OVERLAY_ID}.classic .sie-h{font:600 15px/1.3 "SIE Inter",Inter,"Segoe UI",system-ui,sans-serif}
+    #${OVERLAY_ID}.classic .sie-count{font:600 12px/1 "SIE Inter",Inter,"Segoe UI",system-ui,sans-serif}
+    #${OVERLAY_ID}.classic .sie-ring .out{stroke:transparent}
+    #${OVERLAY_ID}.classic .sie-ring .trk{stroke:var(--trk);stroke-width:5}
+    #${OVERLAY_ID}.classic .sie-ring .fill, #${OVERLAY_ID}.classic .sie-ring .lead{stroke-width:5;stroke-linecap:round}
+    #${OVERLAY_ID}.classic .sie-status.err .sie-card{box-shadow:0 1px 2px rgba(20,22,27,.04),0 2px 10px rgba(20,22,27,.05)}
+    #${OVERLAY_ID}.classic .sie-err-ico{border:0;background:#FDECEC;color:#A3261F}
+    #${OVERLAY_ID}.classic.dark .sie-err-ico{background:#3A1515;color:#F59A93}
     @media (prefers-reduced-motion: reduce){#${OVERLAY_ID} .sie-ring svg, #${OVERLAY_ID} .sie-ring .lead{animation:none}}
     @keyframes sie-spin{to{transform:rotate(360deg)}}`;
   // Fuentes del visor, incluidas en la extensión (nombre propio para no chocar con las de SmartIT).
   try {
     const f = (fam, w, file) => `@font-face{font-family:"${fam}";font-weight:${w};font-display:swap;src:url("${chrome.runtime.getURL('fonts/' + file)}") format("woff2")}`;
-    style.textContent = f('SIE DM Sans', 400, 'dm-sans-latin-400-normal.woff2') + f('SIE JetBrains Mono', 700, 'jetbrains-mono-latin-700-normal.woff2') + style.textContent;
+    style.textContent = f('SIE DM Sans', 400, 'dm-sans-latin-400-normal.woff2') + f('SIE JetBrains Mono', 700, 'jetbrains-mono-latin-700-normal.woff2') +
+      f('SIE Inter', 400, 'inter-latin-400-normal.woff2') + f('SIE Inter', 600, 'inter-latin-600-normal.woff2') + style.textContent;
   } catch (_) { /* sin acceso a la extensión: fuentes del sistema */ }
   document.documentElement.appendChild(style);
 
   // Tema del visor (claro/oscuro/sistema), para que la capa se funda al color correcto.
   let themePref = 'light';
+  let stylePref = 'cards';
   const mqDark = window.matchMedia('(prefers-color-scheme: dark)');
   const isDark = () => themePref === 'dark' || (themePref === 'system' && mqDark.matches);
   try {
-    chrome.storage.local.get('theme').then(r => { themePref = r.theme || 'light'; paintTheme(); }).catch(() => {});
-    chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch.theme) { themePref = ch.theme.newValue || 'light'; paintTheme(); } });
+    chrome.storage.local.get(['theme', 'style']).then(r => { themePref = r.theme || 'light'; stylePref = r.style || 'cards'; paintTheme(); }).catch(() => {});
+    chrome.storage.onChanged.addListener((ch, area) => {
+      if (area !== 'local') return;
+      if (ch.theme) themePref = ch.theme.newValue || 'light';
+      if (ch.style) stylePref = ch.style.newValue || 'cards';
+      if (ch.theme || ch.style) paintTheme();
+    });
   } catch (_) { /* sin acceso al almacenamiento: tema claro */ }
   mqDark.addEventListener('change', () => paintTheme());
-  function paintTheme() { if (overlay) overlay.classList.toggle('dark', isDark()); }
+  function paintTheme() {
+    if (!overlay) return;
+    overlay.classList.toggle('dark', isDark());
+    overlay.classList.toggle('classic', stylePref === 'classic');
+  }
 
   // ¿La ficha de la incidencia ha terminado de cargar? Lo avisa content.js desde el iframe.
   let ticketReady = false;
