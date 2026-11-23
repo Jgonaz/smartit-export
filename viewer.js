@@ -189,9 +189,21 @@
     const dl = $('modal-dl');
     dl.hidden = !a.url;
     if (a.url) { dl.href = a.url; dl.download = a.name; }
-    $('modal').hidden = false;
+    const m = $('modal');
+    clearTimeout(closeTimer);
+    m.classList.remove('closing');
+    if (m.hidden) m.hidden = false; // la animación de entrada la hace el CSS al mostrarse
+    else { const img = $('modal-img'); img.classList.remove('swap'); void img.offsetWidth; img.classList.add('swap'); }
   }
-  function closeModal() { $('modal').hidden = true; current = -1; }
+  let closeTimer;
+  function closeModal() {
+    const m = $('modal');
+    if (m.hidden || m.classList.contains('closing')) return;
+    current = -1;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    m.classList.add('closing');
+    closeTimer = setTimeout(() => { m.hidden = true; m.classList.remove('closing'); }, reduce ? 0 : 170);
+  }
   function step(d) {
     const list = viewable();
     if (!list.length) return;
@@ -203,7 +215,7 @@
   $('modal-next').onclick = () => step(1);
   $('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
   document.addEventListener('keydown', e => {
-    if ($('modal').hidden) return;
+    if ($('modal').hidden || $('modal').classList.contains('closing')) return;
     if (e.key === 'Escape') closeModal();
     if (e.key === 'ArrowLeft') step(-1);
     if (e.key === 'ArrowRight') step(1);
@@ -470,27 +482,50 @@
     box.className = 'metro' + (Math.max(...rowSizes(teamSteps.length)) > 6 ? ' dense' : '');
     const durs = teamSteps.map((s, i) => (i < teamSteps.length - 1 ? toTs(teamSteps[i + 1].date) : endTs) - toTs(s.date));
     const longest = teamSteps.length > 1 ? durs.slice(0, -1).indexOf(Math.max(...durs.slice(0, -1))) : -1;
+    const sizes = rowSizes(teamSteps.length);
+    // Flecha de continuación: punta dibujada con el mismo borde que la vía.
+    const arrow = (cls, color) => {
+      const a = el('div', 'm-arrow ' + cls);
+      a.innerHTML = '<svg viewBox="0 0 16 24" aria-hidden="true"><path d="M1 1 L15 12 L1 23 Z"/></svg>';
+      a.style.setProperty('--c', color);
+      return a;
+    };
+    const durLabel = (k, left) => {
+      const d = el('div', 'm-dur' + (k === longest ? ' long' : ''), fmtDur(Math.max(0, durs[k])));
+      d.style.left = `${left}%`;
+      return d;
+    };
     let i = 0;
-    rowSizes(teamSteps.length).forEach(size => {
+    sizes.forEach((size, r) => {
       const row = el('div', 'metro-row');
-      const pos = j => size === 1 ? 50 : 7 + j * (86 / (size - 1));
+      const hasIn = r > 0, hasOut = r < sizes.length - 1;
+      const L = hasIn ? 17 : 7, R = hasOut ? 83 : 93;
+      const pos = j => size === 1 ? (hasIn || hasOut ? (L + R) / 2 : 50) : L + j * ((R - L) / (size - 1));
       const start = i;
-      for (let j = 0; j < size - 1; j++) {
-        const s = teamSteps[start + j];
-        const seg = el('div', 'm-seg' + (j === 0 ? ' first' : '') + (j === size - 2 ? ' last' : ''));
-        seg.style.left = `calc(${pos(j)}% - ${j === 0 ? 6 : 0}px)`;
-        seg.style.width = `calc(${pos(j + 1) - pos(j)}% + ${(j === 0 ? 6 : 0) + (j === size - 2 ? 6 : 0)}px)`;
-        seg.style.background = teamColor(s.group);
+      // Tramos: [entrada] + entre estaciones + [salida]; el primero y el último cierran la vía.
+      const segs = [];
+      if (hasIn) segs.push({ from: 2.2, to: pos(0), color: teamColor(teamSteps[start - 1].group), dur: start - 1, cls: 'in' });
+      for (let j = 0; j < size - 1; j++) segs.push({ from: pos(j), to: pos(j + 1), color: teamColor(teamSteps[start + j].group), dur: start + j });
+      if (hasOut) segs.push({ from: pos(size - 1), to: 97.6, color: teamColor(teamSteps[start + size - 1].group), cls: 'out' });
+      segs.forEach((g, k) => {
+        const first = k === 0 && g.cls !== 'in', last = k === segs.length - 1 && g.cls !== 'out';
+        const seg = el('div', 'm-seg' + (first ? ' first' : '') + (last ? ' last' : ''));
+        seg.style.left = `calc(${g.from}% - ${first ? 6 : 0}px)`;
+        seg.style.width = `calc(${g.to - g.from}% + ${(first ? 6 : 0) + (last ? 6 : 0)}px)`;
+        seg.style.background = g.color;
         row.appendChild(seg);
-        const d = el('div', 'm-dur' + (start + j === longest ? ' long' : ''), fmtDur(Math.max(0, durs[start + j])));
-        d.style.left = `${(pos(j) + pos(j + 1)) / 2}%`;
-        row.appendChild(d);
-      }
+        if (g.dur != null) row.appendChild(durLabel(g.dur, g.cls === 'in' ? (g.from + g.to) / 2 + 1 : (g.from + g.to) / 2));
+        if (g.cls === 'out') { const a = arrow('out', g.color); a.style.left = `${g.to}%`; row.appendChild(a); }
+        if (g.cls === 'in') { const a = arrow('in', g.color); a.style.left = `${g.from}%`; row.appendChild(a); }
+      });
       for (let j = 0; j < size; j++, i++) {
         const s = teamSteps[i];
         const isNow = i === teamSteps.length - 1 && !closedNow;
         const st = el('div', 'm-st' + (isNow ? ' now' : ''));
         st.style.left = `${pos(j)}%`;
+        // Ancho de la etiqueta según el hueco entre estaciones, para que los nombres no se toquen.
+        const gap = size > 1 ? (R - L) / (size - 1) : 40;
+        st.style.setProperty('--w', `min(200px, calc(${gap}% - 10px))`);
         st.appendChild(el('div', 'm-name', s.group));
         const dot = el('div', 'm-dot');
         if (s.closed || isNow) dot.style.background = teamColor(s.group);
