@@ -53,8 +53,8 @@
     #${OVERLAY_ID} .sie-ring .trk{fill:none;stroke:#E4E6EC;stroke-width:5}
     #${OVERLAY_ID} .sie-ring .fill{fill:none;stroke:#2E44C7;stroke-width:5;stroke-linecap:round;stroke-dasharray:169.65;stroke-dashoffset:127;
       transition:stroke-dashoffset ${T(550)}ms cubic-bezier(.2,.7,.2,1);animation:sie-breathe 1.6s ease-in-out infinite}
-    #${OVERLAY_ID} .sie-ring .lead{fill:none;stroke:#2E44C7;stroke-opacity:.32;stroke-width:5;stroke-linecap:round;stroke-dasharray:169.65;
-      stroke-dashoffset:var(--from,169.65);animation:sie-lead 1.3s ease-in-out infinite}
+    #${OVERLAY_ID} .sie-ring .lead{fill:none;stroke:#2E44C7;stroke-opacity:.45;stroke-width:5;stroke-linecap:round;stroke-dasharray:169.65;
+      stroke-dashoffset:var(--from,169.65);animation:sie-lead 1.4s ease-in-out infinite}
     #${OVERLAY_ID} .sie-ring.indet .lead, #${OVERLAY_ID} .sie-ring.full .lead{display:none}
     @keyframes sie-lead{0%,100%{stroke-dashoffset:var(--from,169.65)}50%{stroke-dashoffset:var(--to,169.65)}}
     #${OVERLAY_ID} .sie-ring.indet svg{animation:sie-spin-r 1s linear infinite}
@@ -152,8 +152,8 @@
   }
 
   // Anillo de progreso: indeterminado (gira) hasta saber cuántas páginas hay. Después, mientras lee la
-  // página N, el anillo muestra lo ya leído (N-1) y un trazo tenue avanza y retrocede hacia N, para que se
-  // vea que sigue trabajando aunque una página tarde. Al terminar las páginas, queda completo.
+  // página N, el anillo muestra lo ya leído (N-1) y su extremo se estira un poco y vuelve, para que se vea
+  // que sigue trabajando aunque una página tarde. Al terminar las páginas, queda completo.
   const CIRC = 169.65;
   function setRing(page, total, complete) {
     const ring = overlay.querySelector('.sie-ring');
@@ -166,7 +166,9 @@
     ring.classList.toggle('full', !!complete);
     fill.style.strokeDashoffset = CIRC * (1 - read / total);
     ring.style.setProperty('--from', CIRC * (1 - read / total));
-    ring.style.setProperty('--to', CIRC * (1 - Math.min(read + 0.85, total) / total));
+    // Solo un pequeño avance (≈6 % del anillo y como mucho un tercio de lo que ocupa una página): no llega a la siguiente.
+    const nudge = Math.min(0.06, 0.33 / total);
+    ring.style.setProperty('--to', CIRC * (1 - Math.min(read / total + nudge, 1)));
     count.textContent = `${complete ? total : cur}/${total}`;
   }
 
