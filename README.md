@@ -1,11 +1,17 @@
 # SmartIT – Exportar incidencia
 
+![Icono de exportar en la cabecera de SmartIT, a la izquierda de la lupa](docs/icono-cabecera.png)
+
 Extensión de Chrome para **BMC Helix SmartIT** (vista Helix Progressive Views) que reúne en una sola pantalla toda la información de una incidencia:
 
 - **Adjuntos** en un carrusel, sin tener que descargarlos. Al pulsar una imagen se abre a pantalla completa; los PDF y textos se abren en una pestaña nueva. Cada adjunto tiene un botón ⓘ que indica de qué nota sale (tipo, autor, fecha, visibilidad) y su contexto: el comentario de la nota, dónde se menciona el archivo (descripción u otras notas) y las notas escritas en el mismo momento.
 - **Toda la incidencia, bien presentada**: cabecera con estado y prioridad, descripción completa (las imágenes que menciona se pueden abrir desde el propio texto), **todas** las páginas de la actividad como línea de tiempo, datos de la ficha y resolución. Un enlace copia todo en **Markdown**, listo para pegar en un agente; también se puede ver el Markdown tal cual antes de copiarlo.
 
 Nace porque la actividad de SmartIT está paginada y ya no se puede copiar entera con Ctrl+C / Ctrl+V, y los adjuntos solo se pueden descargar.
+
+![Visor de una incidencia de ejemplo: adjuntos en carrusel, descripción, actividad y datos de la ficha](docs/visor.png)
+
+*Captura con datos de ejemplo.*
 
 ## Instalación
 
