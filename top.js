@@ -41,42 +41,55 @@
     #${ICON_ID}.open .sie-i-clip{opacity:0;transform:rotate(90deg) scale(.7)}
     #${ICON_ID}.open .sie-i-back{opacity:1;transform:none}
 
-    #${OVERLAY_ID}{position:fixed;left:0;right:0;bottom:0;z-index:2147483000;background:#fff;opacity:0;visibility:hidden;
+    #${OVERLAY_ID}{position:fixed;left:0;right:0;bottom:0;z-index:2147483000;background:#FBFBFA;opacity:0;visibility:hidden;
+      --ink:#161616;--card:#FFFFFF;--grey:#5E5E5E;--hair:#ECECEC;--salmon:#F5A28A;--mint:#A9DCC6;
       transition:opacity ${T(320)}ms ease, visibility 0s linear ${T(320)}ms}
     #${OVERLAY_ID}.show{opacity:1;visibility:visible;transition:opacity ${T(320)}ms ease, visibility 0s}
-    #${OVERLAY_ID} .sie-status{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
-      font:500 15px/1.4 Inter,"Segoe UI",system-ui,sans-serif;color:#4A5060;opacity:0;transform:translateY(6px) scale(.98);
-      transition:opacity ${T(260)}ms ease, transform ${T(320)}ms cubic-bezier(.2,.7,.2,1)}
+    #${OVERLAY_ID} .sie-status{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      opacity:0;transform:translateY(8px);transition:opacity ${T(260)}ms ease, transform ${T(320)}ms cubic-bezier(.2,.7,.2,1)}
     #${OVERLAY_ID}.show .sie-status.on{opacity:1;transform:none;transition-delay:${T(120)}ms}
-    #${OVERLAY_ID} .sie-ring{position:relative;width:64px;height:64px}
+    #${OVERLAY_ID} .sie-card{display:flex;align-items:center;gap:20px;min-width:380px;padding:22px 28px 22px 22px;background:var(--card);
+      border:1.5px solid var(--ink);border-radius:12px;box-shadow:9px 9px 0 var(--mint);color:var(--ink);
+      font:400 15px/1.45 "SIE DM Sans","DM Sans","Segoe UI",system-ui,sans-serif;transition:box-shadow ${T(300)}ms ease}
+    #${OVERLAY_ID} .sie-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
+    #${OVERLAY_ID} .sie-h{font:700 15px/1.3 "SIE JetBrains Mono","JetBrains Mono",Consolas,ui-monospace,monospace}
+    #${OVERLAY_ID} .sie-ring{position:relative;width:64px;height:64px;flex:none}
     #${OVERLAY_ID} .sie-ring svg{width:64px;height:64px;transform:rotate(-90deg);display:block}
-    #${OVERLAY_ID} .sie-ring .trk{fill:none;stroke:#E4E6EC;stroke-width:5}
-    #${OVERLAY_ID} .sie-ring .fill{fill:none;stroke:#2E44C7;stroke-width:5;stroke-linecap:round;stroke-dasharray:169.65;stroke-dashoffset:127;
-      transition:stroke-dashoffset ${T(550)}ms cubic-bezier(.2,.7,.2,1);animation:sie-breathe 1.6s ease-in-out infinite}
-    #${OVERLAY_ID} .sie-ring .lead{fill:none;stroke:#2E44C7;stroke-opacity:.45;stroke-width:5;stroke-linecap:round;stroke-dasharray:169.65;
+    #${OVERLAY_ID} .sie-ring .out{fill:none;stroke:var(--ink);stroke-width:10}
+    #${OVERLAY_ID} .sie-ring .trk{fill:none;stroke:var(--card);stroke-width:7}
+    #${OVERLAY_ID} .sie-ring .fill{fill:none;stroke:var(--salmon);stroke-width:7;stroke-dasharray:169.65;stroke-dashoffset:127;
+      transition:stroke-dashoffset ${T(550)}ms cubic-bezier(.2,.7,.2,1)}
+    #${OVERLAY_ID} .sie-ring .lead{fill:none;stroke:var(--salmon);stroke-opacity:.45;stroke-width:7;stroke-dasharray:169.65;
       stroke-dashoffset:var(--from,169.65);animation:sie-lead 1.4s ease-in-out infinite}
     #${OVERLAY_ID} .sie-ring.indet .lead, #${OVERLAY_ID} .sie-ring.full .lead{display:none}
+    #${OVERLAY_ID} .sie-ring.full .fill{stroke:var(--mint)}
     @keyframes sie-lead{0%,100%{stroke-dashoffset:var(--from,169.65)}50%{stroke-dashoffset:var(--to,169.65)}}
     #${OVERLAY_ID} .sie-ring.indet svg{animation:sie-spin-r 1s linear infinite}
-    #${OVERLAY_ID} .sie-count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 13px/1 Inter,"Segoe UI",system-ui,sans-serif;color:#14161B;
+    #${OVERLAY_ID} .sie-count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      font:700 12px/1 "SIE JetBrains Mono","JetBrains Mono",Consolas,ui-monospace,monospace;color:var(--ink);
       font-variant-numeric:tabular-nums;transition:opacity ${T(200)}ms ease}
-    @keyframes sie-breathe{0%,100%{stroke-opacity:1}50%{stroke-opacity:.7}}
     @keyframes sie-spin-r{from{transform:rotate(-90deg)}to{transform:rotate(270deg)}}
-    #${OVERLAY_ID} .sie-text{min-height:21px;transition:opacity ${T(90)}ms ease}
+    #${OVERLAY_ID} .sie-text{min-height:21px;color:var(--grey);transition:opacity ${T(90)}ms ease}
     #${OVERLAY_ID} .sie-text.swap{opacity:.75}
     #${OVERLAY_ID} .sie-status.err .sie-ring{display:none}
-    #${OVERLAY_ID} .sie-err-ico{display:none;width:44px;height:44px;border-radius:50%;background:#FDECEC;color:#A3261F;font:700 22px/44px system-ui;text-align:center}
+    #${OVERLAY_ID} .sie-status.err .sie-card{box-shadow:9px 9px 0 var(--salmon)}
+    #${OVERLAY_ID} .sie-err-ico{display:none;flex:none;width:48px;height:48px;border-radius:50%;border:2px solid var(--ink);background:var(--salmon);color:var(--ink);
+      font:700 22px/44px "SIE JetBrains Mono",Consolas,monospace;text-align:center}
     #${OVERLAY_ID} .sie-status.err .sie-err-ico{display:block}
     #${OVERLAY_ID} iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent;opacity:0;transform:translateY(10px);
       transition:opacity ${T(380)}ms ease, transform ${T(420)}ms cubic-bezier(.2,.7,.2,1)}
     #${OVERLAY_ID} iframe.on{opacity:1;transform:none}
-    #${OVERLAY_ID}.dark{background:#0F1115}
-    #${OVERLAY_ID}.dark .sie-status{color:#D3D7E0}
-    #${OVERLAY_ID}.dark .sie-ring .trk{stroke:#262A33}
-    #${OVERLAY_ID}.dark .sie-ring .fill, #${OVERLAY_ID}.dark .sie-ring .lead{stroke:#8B9BFF}
-    #${OVERLAY_ID}.dark .sie-count{color:#ECEEF3}
-    #${OVERLAY_ID}.dark .sie-err-ico{background:#3A1515;color:#F59A93}
+    #${OVERLAY_ID}.dark{background:#121419;--ink:#EEF0F4;--card:#1B1E25;--grey:#A3A9B5;--hair:#2B2F38;--salmon:#D98770;--mint:#82BBA3}
+    #${OVERLAY_ID}.dark .sie-card{border-color:#C9CDD6}
+    #${OVERLAY_ID}.dark .sie-ring .out{stroke:#C9CDD6}
+    #${OVERLAY_ID}.dark .sie-err-ico{border-color:#C9CDD6}
+    @media (prefers-reduced-motion: reduce){#${OVERLAY_ID} .sie-ring svg, #${OVERLAY_ID} .sie-ring .lead{animation:none}}
     @keyframes sie-spin{to{transform:rotate(360deg)}}`;
+  // Fuentes del visor, incluidas en la extensión (nombre propio para no chocar con las de SmartIT).
+  try {
+    const f = (fam, w, file) => `@font-face{font-family:"${fam}";font-weight:${w};font-display:swap;src:url("${chrome.runtime.getURL('fonts/' + file)}") format("woff2")}`;
+    style.textContent = f('SIE DM Sans', 400, 'dm-sans-latin-400-normal.woff2') + f('SIE JetBrains Mono', 700, 'jetbrains-mono-latin-700-normal.woff2') + style.textContent;
+  } catch (_) { /* sin acceso a la extensión: fuentes del sistema */ }
   document.documentElement.appendChild(style);
 
   // Tema del visor (claro/oscuro/sistema), para que la capa se funda al color correcto.
@@ -127,8 +140,8 @@
     overlay = document.createElement('div');
     overlay.id = OVERLAY_ID;
     overlay.innerHTML = '<div class="sie-status" role="status" aria-live="polite">' +
-      '<div class="sie-ring indet" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="27"/><circle class="lead" cx="32" cy="32" r="27"/><circle class="fill" cx="32" cy="32" r="27"/></svg><span class="sie-count"></span></div>' +
-      '<div class="sie-err-ico">!</div><div class="sie-text"></div></div>';
+      '<div class="sie-card"><div class="sie-ring indet" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="out" cx="32" cy="32" r="27"/><circle class="trk" cx="32" cy="32" r="27"/><circle class="lead" cx="32" cy="32" r="27"/><circle class="fill" cx="32" cy="32" r="27"/></svg><span class="sie-count"></span></div>' +
+      '<div class="sie-err-ico">!</div><div class="sie-copy"><div class="sie-h">Exportando incidencia</div><div class="sie-text"></div></div></div></div>';
     statusEl = overlay.querySelector('.sie-status');
     textEl = overlay.querySelector('.sie-text');
     document.body.appendChild(overlay);
@@ -174,6 +187,7 @@
 
   function showStatus(t, isError) {
     statusEl.classList.toggle('err', !!isError);
+    overlay.querySelector('.sie-h').textContent = isError ? 'No se pudo exportar' : 'Exportando incidencia';
     textEl.textContent = t;
     statusEl.classList.add('on');
   }
