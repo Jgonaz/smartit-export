@@ -296,6 +296,11 @@
       data.fields.forEach(f => L.push(`- ${f.label}: ${indent(f.value)}`));
       L.push('');
     }
+    if (showTeams) {
+      L.push(`## Recorrido entre equipos (${bounces} cambios de equipo)`);
+      teamSteps.forEach((s, i) => L.push(`${i + 1}. [${s.date}] ${s.group}${s.by ? ` (por ${s.by})` : ''}`));
+      L.push('');
+    }
     const entries = (data.activity || []).filter(e => withSystem || e.isNote || (e.attachments || []).length);
     L.push(`## Actividad (${entries.length} entradas, de la más antigua a la más reciente)`);
     entries.forEach(e => {
@@ -341,6 +346,74 @@
       return match;
     });
     target.append(text.slice(last));
+  }
+
+  // ---------- recorrido entre equipos ----------
+  // Grupos de soporte por los que ha pasado la incidencia, en orden, a partir de la actividad:
+  // "El Grupo de soporte ha cambiado a: X" y "Asignado a X por Y" (cuando X es un grupo, no una persona).
+  const GROUP_HINT = /^(soporte|support|equipo|grupo|mesa|cau|service ?desk|help ?desk|nivel|n[123]\b|l[123]\b|sistemas|operaciones|desarrollo|plataforma|infraestructura|redes|seguridad|comunicaciones|aplicaciones|explotaci)/i;
+  function teamPath() {
+    const known = new Set();
+    (data.fields || []).filter(f => /^grupo de soporte$/i.test(f.label)).forEach(f => known.add(f.value.trim().toLowerCase()));
+    const people = new Set((data.activity || []).map(e => (e.author || '').trim().toLowerCase()).filter(Boolean));
+    (data.fields || []).filter(f => /^asignado a$/i.test(f.label)).forEach(f => people.add(f.value.trim().toLowerCase()));
+    const textOf = e => [e.type, e.action, e.body].filter(Boolean).join('\n');
+    const R_CHANGED = /grupo de soporte ha cambiado a:?\s*(.+?)\s*$/im;
+    const R_ASSIGNED = /asignad[oa] a:?\s+(.+?)\s+por\s+(.+?)\s*$/im;
+    (data.activity || []).forEach(e => { const m = R_CHANGED.exec(textOf(e)); if (m) known.add(m[1].toLowerCase()); });
+
+    const steps = [];
+    (data.activity || []).forEach(e => {
+      const t = textOf(e);
+      let group = null, by = '';
+      const c = R_CHANGED.exec(t);
+      const a = R_ASSIGNED.exec(t);
+      if (c) { group = c[1]; by = e.author || ''; }
+      else if (a) {
+        const x = a[1].replace(/^["«“]|["»”]$/g, '').trim();
+        const lx = x.toLowerCase();
+        if (known.has(lx) || (!people.has(lx) && GROUP_HINT.test(x))) { group = x; by = a[2]; }
+      }
+      if (!group) return;
+      const last = steps[steps.length - 1];
+      if (last && last.group.toLowerCase() === group.toLowerCase()) return; // mismo grupo: no es un cambio
+      steps.push({ group, date: e.date, by });
+    });
+    return steps;
+  }
+  const TEAM_COLORS = ['#2E44C7', '#B4532A', '#1F7A6B', '#7A3FB0', '#2B6A9E', '#A3261F', '#6B5A12', '#3D7A2B'];
+  const teamSteps = teamPath();
+  const bounces = Math.max(0, teamSteps.length - 1);
+  const showTeams = bounces >= 3;
+
+  function renderTeams() {
+    $('teams-card').hidden = !showTeams;
+    if (!showTeams) return;
+    const distinct = [...new Set(teamSteps.map(s => s.group.toLowerCase()))];
+    $('teams-summary').textContent = `${bounces} cambios de equipo · ${distinct.length} equipos distintos`;
+    const counts = {};
+    const ol = $('teams');
+    ol.textContent = '';
+    teamSteps.forEach((s, i) => {
+      const k = s.group.toLowerCase();
+      counts[k] = (counts[k] || 0) + 1;
+      const li = el('li', 'team');
+      if (i > 0) {
+        const arrow = el('span', 'team-arrow');
+        arrow.setAttribute('aria-hidden', 'true');
+        arrow.innerHTML = svg('<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>');
+        li.appendChild(arrow);
+      }
+      const box = el('div', 'team-box');
+      box.style.setProperty('--tc', TEAM_COLORS[distinct.indexOf(k) % TEAM_COLORS.length]);
+      const step = el('div', 'team-step', `Paso ${i + 1}`);
+      if (counts[k] > 1) step.appendChild(Object.assign(el('span', 'team-repeat', `${counts[k]}ª vez`), { title: 'Vuelve a un equipo por el que ya pasó' }));
+      if (i === teamSteps.length - 1) step.appendChild(el('span', 'team-now', 'actual'));
+      box.append(step, el('div', 'team-name', s.group),
+        el('div', 'team-when', [shortDate(s.date), s.by && `por ${s.by}`].filter(Boolean).join(' · ')));
+      li.appendChild(box);
+      ol.appendChild(li);
+    });
   }
 
   function renderDescription() {
@@ -437,6 +510,7 @@
   $('mode-view').onclick = () => { mode = 'view'; render(); };
   $('mode-md').onclick = () => { mode = 'md'; render(); };
   renderDescription();
+  renderTeams();
   render();
 
   let toastTimer;

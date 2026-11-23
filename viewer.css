@@ -122,6 +122,18 @@ time { font-size: 12px; color: var(--faint); white-space: nowrap; }
 .file-chip:hover { border-color: var(--accent); color: var(--accent); }
 .file-chip svg { width: 12px; height: 12px; }
 
+/* recorrido entre equipos */
+.teams { list-style: none; margin: 0; padding: 4px 0 6px; display: flex; flex-wrap: wrap; align-items: stretch; row-gap: 14px; }
+.team { display: flex; align-items: stretch; flex: none; }
+.team-box { width: 168px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #FCFCFD; display: flex; flex-direction: column; gap: 3px; border-top: 4px solid var(--tc); }
+.team-step { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+.team-name { font-weight: 600; font-size: 13.5px; line-height: 1.3; }
+.team-when { font-size: 12px; color: var(--muted); }
+.team-repeat { white-space: nowrap; font-size: 11px; font-weight: 700; color: #8A4B00; background: #FFF1DB; border-radius: 999px; padding: 0 7px; letter-spacing: 0; text-transform: none; }
+.team-now { white-space: nowrap; font-size: 11px; font-weight: 700; color: #146C3A; background: #E8F6EE; border-radius: 999px; padding: 0 7px; letter-spacing: 0; text-transform: none; }
+.team-arrow { width: 32px; flex: none; display: flex; align-items: center; justify-content: center; color: #A9AEBB; }
+.team-arrow svg { width: 20px; height: 20px; }
+
 .fields { margin: 0; display: flex; flex-direction: column; }
 .fields div { display: flex; flex-direction: column; gap: 1px; padding: 9px 0; border-top: 1px solid var(--line-2); }
 .fields dt { font-size: 12px; color: var(--muted); }
