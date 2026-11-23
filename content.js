@@ -246,7 +246,7 @@
       return size > 0 ? Math.ceil(+m[3] / size) : 0;
     })();
     for (let guard = 0; guard < 200; guard++) {
-      onProgress && onProgress(`Analizando incidencia: página ${page}${totalPages ? '/' + totalPages : ''}...`);
+      onProgress && onProgress('Analizando páginas de la incidencia...', { page, total: totalPages });
       await waitFor(() => iframesReady(root), 15000);
       for (const f of feedIframes(root)) {
         try {
@@ -391,7 +391,7 @@
         console.warn('[SmartIT export] no se obtuvieron las claves de', e.id, err);
       }
       for (const a of e.attachments) {
-        onProgress && onProgress(`Cargando adjuntos: ${++i} de ${total}...`);
+        onProgress && onProgress(`Cargando adjuntos: ${++i} de ${total}...`, { attachments: true });
         const key = keys[SLOT_FIELD[a.slot]];
         try {
           if (!key || !key.payload) throw new Error('sin clave de descarga');
@@ -412,7 +412,7 @@
   async function runExport(ui, sourceUrl, inline) {
     if (running) return;
     running = true;
-    const progress = t => ui.progress(t);
+    const progress = (t, extra) => ui.progress(t, extra);
     try {
       progress('Analizando incidencia...');
       const header = collectHeader();
@@ -450,7 +450,7 @@
     const reply = (sie, extra) => { try { e.source.postMessage(Object.assign({ sie }, extra), e.origin); } catch (_) {} };
     reply('started');
     runExport({
-      progress: text => reply('progress', { text }),
+      progress: (text, extra) => reply('progress', Object.assign({ text }, extra)),
       done: id => reply('done', { id }),
       error: text => reply('error', { text })
     }, e.data.url, !!e.data.inline);

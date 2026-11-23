@@ -45,10 +45,19 @@
       font:500 15px/1.4 Inter,"Segoe UI",system-ui,sans-serif;color:#4A5060;opacity:0;transform:translateY(6px) scale(.98);
       transition:opacity ${T(260)}ms ease, transform ${T(320)}ms cubic-bezier(.2,.7,.2,1)}
     #${OVERLAY_ID}.show .sie-status.on{opacity:1;transform:none;transition-delay:${T(120)}ms}
-    #${OVERLAY_ID} .sie-spinner{width:44px;height:44px;border-radius:50%;border:3px solid #E4E6EC;border-top-color:#2E44C7;animation:sie-spin .8s linear infinite}
+    #${OVERLAY_ID} .sie-ring{position:relative;width:64px;height:64px}
+    #${OVERLAY_ID} .sie-ring svg{width:64px;height:64px;transform:rotate(-90deg);display:block}
+    #${OVERLAY_ID} .sie-ring .trk{fill:none;stroke:#E4E6EC;stroke-width:5}
+    #${OVERLAY_ID} .sie-ring .fill{fill:none;stroke:#2E44C7;stroke-width:5;stroke-linecap:round;stroke-dasharray:169.65;stroke-dashoffset:127;
+      transition:stroke-dashoffset ${T(550)}ms cubic-bezier(.2,.7,.2,1);animation:sie-breathe 1.6s ease-in-out infinite}
+    #${OVERLAY_ID} .sie-ring.indet svg{animation:sie-spin-r 1s linear infinite}
+    #${OVERLAY_ID} .sie-count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 13px/1 Inter,"Segoe UI",system-ui,sans-serif;color:#14161B;
+      font-variant-numeric:tabular-nums;transition:opacity ${T(200)}ms ease}
+    @keyframes sie-breathe{0%,100%{stroke-opacity:1}50%{stroke-opacity:.7}}
+    @keyframes sie-spin-r{from{transform:rotate(-90deg)}to{transform:rotate(270deg)}}
     #${OVERLAY_ID} .sie-text{min-height:21px;transition:opacity ${T(90)}ms ease}
     #${OVERLAY_ID} .sie-text.swap{opacity:.75}
-    #${OVERLAY_ID} .sie-status.err .sie-spinner{display:none}
+    #${OVERLAY_ID} .sie-status.err .sie-ring{display:none}
     #${OVERLAY_ID} .sie-err-ico{display:none;width:44px;height:44px;border-radius:50%;background:#FDECEC;color:#A3261F;font:700 22px/44px system-ui;text-align:center}
     #${OVERLAY_ID} .sie-status.err .sie-err-ico{display:block}
     #${OVERLAY_ID} iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent;opacity:0;transform:translateY(10px);
@@ -56,7 +65,9 @@
     #${OVERLAY_ID} iframe.on{opacity:1;transform:none}
     #${OVERLAY_ID}.dark{background:#0F1115}
     #${OVERLAY_ID}.dark .sie-status{color:#D3D7E0}
-    #${OVERLAY_ID}.dark .sie-spinner{border-color:#262A33;border-top-color:#8B9BFF}
+    #${OVERLAY_ID}.dark .sie-ring .trk{stroke:#262A33}
+    #${OVERLAY_ID}.dark .sie-ring .fill{stroke:#8B9BFF}
+    #${OVERLAY_ID}.dark .sie-count{color:#ECEEF3}
     #${OVERLAY_ID}.dark .sie-err-ico{background:#3A1515;color:#F59A93}
     @keyframes sie-spin{to{transform:rotate(360deg)}}`;
   document.documentElement.appendChild(style);
@@ -108,7 +119,9 @@
     if (overlay) return;
     overlay = document.createElement('div');
     overlay.id = OVERLAY_ID;
-    overlay.innerHTML = '<div class="sie-status" role="status" aria-live="polite"><div class="sie-spinner"></div><div class="sie-err-ico">!</div><div class="sie-text"></div></div>';
+    overlay.innerHTML = '<div class="sie-status" role="status" aria-live="polite">' +
+      '<div class="sie-ring indet" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="27"/><circle class="fill" cx="32" cy="32" r="27"/></svg><span class="sie-count"></span></div>' +
+      '<div class="sie-err-ico">!</div><div class="sie-text"></div></div>';
     statusEl = overlay.querySelector('.sie-status');
     textEl = overlay.querySelector('.sie-text');
     document.body.appendChild(overlay);
@@ -131,6 +144,19 @@
     setTimeout(() => { textEl.textContent = t; textEl.classList.remove('swap'); }, T(80));
   }
 
+  // Anillo de progreso: indeterminado (gira) hasta saber cuántas páginas hay; luego se llena con "X/Y".
+  const CIRC = 169.65;
+  function setRing(page, total) {
+    const ring = overlay.querySelector('.sie-ring');
+    const fill = overlay.querySelector('.sie-ring .fill');
+    const count = overlay.querySelector('.sie-count');
+    if (!total) { ring.classList.add('indet'); fill.style.strokeDashoffset = CIRC * 0.75; count.textContent = ''; return; }
+    ring.classList.remove('indet');
+    const done = Math.min(page, total);
+    fill.style.strokeDashoffset = CIRC * (1 - done / total);
+    count.textContent = `${done}/${total}`;
+  }
+
   function showStatus(t, isError) {
     statusEl.classList.toggle('err', !!isError);
     textEl.textContent = t;
@@ -150,6 +176,7 @@
     setIcon(true, 'Volver a SmartIT');
     if (cache) { cache.iframe.remove(); cache = null; }
     showStatus('Analizando incidencia...');
+    setRing(0, 0);
     requestAnimationFrame(() => overlay.classList.add('show'));
     const hash = location.hash;
     visibleFrames().forEach(f => {
@@ -238,7 +265,12 @@
     }
     if (!isOnbmc(e.origin) || state !== 'loading') return;
     if (e.data.sie === 'started') clearTimeout(startTimer);
-    else if (e.data.sie === 'progress') { clearTimeout(startTimer); setText(e.data.text || 'Analizando incidencia...'); }
+    else if (e.data.sie === 'progress') {
+      clearTimeout(startTimer);
+      setText(e.data.text || 'Analizando incidencia...');
+      if (e.data.total) setRing(e.data.page, e.data.total);
+      else if (e.data.attachments) { const c = overlay.querySelector('.sie-count'); if (c.textContent) { const t = c.textContent.split('/')[1]; setRing(+t, +t); } }
+    }
     else if (e.data.sie === 'done') { clearTimeout(startTimer); showViewer(e.data.id); }
     else if (e.data.sie === 'error') {
       clearTimeout(startTimer);
