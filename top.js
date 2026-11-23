@@ -5,7 +5,7 @@
   if (window.top !== window) return;
 
   const ICON_ID = 'sie-header-export';
-  const SVG = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  const SVG = `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 3h6v3H9z"/>
     <path d="M8.5 11h7M8.5 14.5h7M8.5 18h4"/></svg>`;
   const isOnbmc = origin => /^https:\/\/[\w.-]+\.onbmc\.com$/.test(origin);
@@ -13,7 +13,8 @@
   const style = document.createElement('style');
   style.textContent = `
     #${ICON_ID}{float:left;display:flex;align-items:center;justify-content:center;box-sizing:content-box;height:20px;padding:10px 6px;margin-top:2px;color:#fff;cursor:pointer;opacity:.9;line-height:0}
-    #${ICON_ID} svg{flex:none;overflow:visible}
+    #${ICON_ID} svg{flex:none!important;overflow:visible!important;width:30px!important;height:30px!important;
+      min-width:30px!important;min-height:30px!important;max-width:none!important;max-height:none!important;margin:-5px 0!important}
     #${ICON_ID}:hover{opacity:1}
     #${ICON_ID}.busy{cursor:progress;animation:sie-pulse 1s ease-in-out infinite}
     #${ICON_ID}.hidden{display:none}
