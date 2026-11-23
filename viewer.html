@@ -6,39 +6,91 @@
   <link rel="stylesheet" href="viewer.css">
 </head>
 <body>
-  <header class="top">
-    <div>
-      <h1 id="title">Cargando…</h1>
-      <div id="subtitle" class="muted"></div>
+  <header class="topbar">
+    <div class="wrap topbar-in">
+      <div class="head-main">
+        <div class="eyebrow">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9z"/><path d="M8.5 11h7M8.5 14.5h7M8.5 18h4"/></svg>
+          <span id="exported">SmartIT · Exportación</span>
+        </div>
+        <div class="title-row">
+          <span id="number" class="inc-pill" hidden></span>
+          <h1 id="title">Cargando…</h1>
+        </div>
+        <div id="meta" class="meta"></div>
+      </div>
+      <a id="source" class="btn-outline" target="_blank" rel="noopener" hidden>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+        Abrir en SmartIT
+      </a>
     </div>
-    <a id="source" class="muted" target="_blank" rel="noopener"></a>
   </header>
 
-  <section class="card">
-    <div class="section-head">
-      <h2>Adjuntos <span id="att-count" class="pill">0</span></h2>
-    </div>
-    <div id="att-notice" class="notice" hidden></div>
-    <div class="carousel-wrap">
-      <button class="nav prev" id="car-prev" aria-label="Anterior">‹</button>
-      <div id="carousel" class="carousel"></div>
-      <button class="nav next" id="car-next" aria-label="Siguiente">›</button>
-    </div>
-    <p id="att-empty" class="muted" hidden>Esta incidencia no tiene adjuntos.</p>
-  </section>
-
-  <section class="card">
-    <div class="section-head">
-      <h2>Información para el agente</h2>
-      <div class="actions">
-        <label class="toggle"><input type="checkbox" id="opt-system" checked> Incluir eventos automáticos (estado, asignación…)</label>
-        <label class="toggle"><input type="checkbox" id="opt-fields" checked> Incluir datos de la ficha</label>
-        <button id="copy" class="primary">Copiar</button>
+  <main class="wrap main">
+    <section class="card att-card" aria-labelledby="att-h">
+      <div class="att-head">
+        <div class="att-title">
+          <h2 id="att-h">Adjuntos</h2>
+          <span id="att-count" class="count">0</span>
+          <span class="hint">Pulsa una imagen para verla a pantalla completa · ⓘ muestra de dónde sale</span>
+        </div>
+        <div class="att-nav">
+          <button type="button" class="icon-btn" id="car-prev" aria-label="Anteriores"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <button type="button" class="icon-btn" id="car-next" aria-label="Siguientes"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+        </div>
       </div>
-    </div>
-    <div id="activity-status" class="muted small"></div>
-    <textarea id="text" readonly spellcheck="false"></textarea>
-  </section>
+      <div id="att-notice" class="notice" hidden></div>
+      <div id="carousel" class="carousel"></div>
+      <p id="att-empty" class="empty" hidden>Esta incidencia no tiene adjuntos.</p>
+    </section>
+
+    <section class="info" aria-labelledby="info-h">
+      <div class="info-head">
+        <div>
+          <h2 id="info-h">Información para el agente</h2>
+          <button type="button" id="copy" class="copy-link">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>
+            <span id="copy-label">Pulsa aquí para copiar el markdown completo</span>
+          </button>
+        </div>
+        <div class="controls">
+          <label class="check"><input type="checkbox" id="opt-system" checked> Eventos automáticos</label>
+          <label class="check"><input type="checkbox" id="opt-fields" checked> Datos de la ficha</label>
+          <div class="seg" role="group" aria-label="Modo de vista">
+            <button type="button" id="mode-view" aria-pressed="true">Vista</button>
+            <button type="button" id="mode-md" aria-pressed="false">Markdown</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="view" class="cols">
+        <div class="col-main">
+          <article class="card pad" id="desc-card">
+            <h3 class="label">Descripción</h3>
+            <div id="desc" class="desc"></div>
+          </article>
+          <article class="card pad">
+            <div class="act-head">
+              <h3 class="label">Actividad</h3>
+              <span id="act-count" class="muted small"></span>
+            </div>
+            <ol id="timeline" class="timeline"></ol>
+          </article>
+        </div>
+        <aside class="col-side">
+          <div class="card pad" id="fields-card">
+            <h3 class="label">Datos de la incidencia</h3>
+            <dl id="fields" class="fields"></dl>
+          </div>
+          <div class="card pad" id="res-card" hidden>
+            <h3 class="label">Resolución</h3>
+            <p id="resolution" class="res"></p>
+          </div>
+        </aside>
+      </div>
+      <pre id="md" class="card md" hidden></pre>
+    </section>
+  </main>
 
   <div id="modal" class="modal" hidden>
     <button class="modal-close" id="modal-close" aria-label="Cerrar">✕</button>
@@ -49,6 +101,8 @@
     </figure>
     <button class="modal-nav next" id="modal-next" aria-label="Siguiente">›</button>
   </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden>Markdown copiado al portapapeles</div>
 
   <script src="viewer.js"></script>
 </body>

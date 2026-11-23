@@ -3,7 +3,7 @@
 Extensión de Chrome para **BMC Helix SmartIT** (vista Helix Progressive Views) que reúne en una sola pantalla toda la información de una incidencia:
 
 - **Adjuntos** en un carrusel, sin tener que descargarlos. Al pulsar una imagen se abre a pantalla completa; los PDF y textos se abren en una pestaña nueva. Cada adjunto tiene un botón ⓘ que indica de qué nota sale (tipo, autor, fecha, visibilidad) y su contexto: el comentario de la nota, dónde se menciona el archivo (descripción u otras notas) y las notas escritas en el mismo momento.
-- **Toda la incidencia en texto** (Markdown) lista para copiar y pegar en un agente o en cualquier otro sitio: cabecera, URL, descripción completa, datos de la ficha y **todas** las páginas de la actividad en orden cronológico.
+- **Toda la incidencia, bien presentada**: cabecera con estado y prioridad, descripción completa (las imágenes que menciona se pueden abrir desde el propio texto), **todas** las páginas de la actividad como línea de tiempo, datos de la ficha y resolución. Un enlace copia todo en **Markdown**, listo para pegar en un agente; también se puede ver el Markdown tal cual antes de copiarlo.
 
 Nace porque la actividad de SmartIT está paginada y ya no se puede copiar entera con Ctrl+C / Ctrl+V, y los adjuntos solo se pueden descargar.
 
@@ -21,7 +21,7 @@ Para actualizar: sustituye los archivos, pulsa ↻ en la tarjeta de la extensió
 Abre una incidencia y pulsa el icono 📋 de la cabecera de SmartIT, a la izquierda de la lupa. Se abre una pestaña con el visor:
 
 - **Arriba:** carrusel de adjuntos.
-- **Abajo:** el texto de la incidencia, con botón **Copiar** y opciones para incluir o quitar los eventos automáticos (cambios de estado, asignaciones…) y los datos de la ficha.
+- **Abajo:** la información de la incidencia con formato, con el enlace «Pulsa aquí para copiar el markdown completo», el selector Vista / Markdown y opciones para incluir o quitar los eventos automáticos (cambios de estado, asignaciones…) y los datos de la ficha.
 
 Si abres la vista Helix directamente (sin SmartIT alrededor), aparece en su lugar un botón flotante abajo a la derecha.
 

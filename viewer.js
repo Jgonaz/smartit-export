@@ -6,18 +6,44 @@
   const data = store[key];
   if (!data) {
     $('title').textContent = 'No hay datos para mostrar';
-    $('subtitle').textContent = 'Vuelve a pulsar "Exportar incidencia" en SmartIT.';
+    $('meta').textContent = 'Vuelve a pulsar el icono de exportar en SmartIT.';
     return;
   }
 
   const h = data.header || {};
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  const svg = paths => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
+  const ICON = {
+    image: svg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 15l5-4 4 3 3-2 6 4"/>'),
+    clip: svg('<path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6a3.3 3.3 0 0 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 0 1-2.4-2.4l7.9-7.9"/>'),
+    lines: svg('<path d="M4 6h16M4 12h10M4 18h7"/>'),
+    info: svg('<path d="M12 11v6"/><path d="M12 7.5v.01"/>'),
+    file: svg('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>')
+  };
+
   document.title = `${h.number || 'Incidencia'} – ${h.summary || ''}`;
-  $('title').textContent = [h.number, h.summary].filter(Boolean).join(' — ');
-  $('subtitle').textContent = [h.status && `Estado: ${h.status}`, h.priority && `Prioridad: ${h.priority}`,
-    h.created && `Creada: ${h.created}`].filter(Boolean).join(' · ');
-  if (data.sourceUrl) { $('source').href = data.sourceUrl; $('source').textContent = 'Abrir en SmartIT ↗'; }
-  $('activity-status').textContent = data.activityStatus
-    ? `Actividad leída: ${data.activity.length} entradas (${data.activityStatus})` : '';
+  if (h.number) { $('number').textContent = h.number; $('number').hidden = false; }
+  $('title').textContent = h.summary || h.number || 'Incidencia';
+  try {
+    const d = new Date(data.exportedAt);
+    $('exported').textContent = `SmartIT · Exportación del ${d.toLocaleDateString('es-ES')} ${d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+  } catch (_) {}
+  const shortDate = s => (s || '').replace(/:\d{2}$/, '');
+  const statusClass = s => /resuel|cerrad|completad/i.test(s) ? 'b-green'
+    : /cancel/i.test(s) ? 'b-gray' : /pendient|espera/i.test(s) ? 'b-amber' : 'b-blue';
+  const prioClass = p => /cr[ií]tic|alta|urgent/i.test(p) ? 'b-red' : /media/i.test(p) ? 'b-amber' : 'b-gray';
+  const meta = $('meta');
+  const addSep = () => { if (meta.childNodes.length) meta.appendChild(el('span', 'sep', '•')); };
+  if (h.status) { const b = el('span', 'badge ' + statusClass(h.status)); b.appendChild(el('span', 'dot')); b.append(h.status); meta.appendChild(b); }
+  if (h.priority) meta.appendChild(el('span', 'badge ' + prioClass(h.priority), `Prioridad ${h.priority.toLowerCase()}`));
+  if (h.created) { addSep(); meta.appendChild(el('span', '', `Creada ${shortDate(h.created)}`)); }
+  if (h.modified) { addSep(); meta.appendChild(el('span', '', `Actualizada ${shortDate(h.modified)}`)); }
+  if (data.sourceUrl) { $('source').href = data.sourceUrl; $('source').hidden = false; }
 
   // ---------- adjuntos ----------
   const IMG_EXT = /\.(png|jpe?g|gif|bmp|webp|svg)$/i;
@@ -26,7 +52,8 @@
     attachments.push({ ...a, date: e.date, author: e.author, entry: e })));
   $('att-count').textContent = attachments.length;
   $('att-empty').hidden = attachments.length > 0;
-  document.querySelector('.carousel-wrap').hidden = attachments.length === 0;
+  $('carousel').hidden = attachments.length === 0;
+  document.querySelector('.att-nav').hidden = attachments.length < 4;
 
   // data: URL -> blob: URL (Chrome no deja abrir data: en una pestaña nueva).
   const dataUrlToBlobUrl = du => {
@@ -170,29 +197,48 @@
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { pop.hidden = true; popFor = null; } });
   carousel.addEventListener('scroll', () => { pop.hidden = true; popFor = null; });
 
+  // Resumen corto del contexto para la tarjeta.
+  function contextSummary(a) {
+    const ctx = attachmentContext(a);
+    if (!ctx.length) return '';
+    const c = ctx[0].label;
+    if (c.startsWith('Comentario')) return 'Comentario de la nota';
+    if (c.includes('Descripción')) return 'Mencionado en la descripción';
+    if (c.startsWith('Mencionada')) return 'Mencionado en otra nota';
+    return 'Nota del mismo momento';
+  }
+
   attachments.forEach((a, i) => {
-    const b = document.createElement('div');
-    b.className = 'thumb';
-    b.setAttribute('role', 'button');
-    b.tabIndex = 0;
+    const tile = el('div', 'tile');
     const src = imgSrc(a);
-    const ext = (a.name.split('.').pop() || '?').toUpperCase().slice(0, 5);
-    b.innerHTML = `<div class="img">${src ? '<img alt="">' : `<span class="ext"></span>`}</div>
-      <div class="meta"><div class="name"></div><div class="sub"></div></div>`;
-    if (src) b.querySelector('img').src = src; else b.querySelector('.ext').textContent = ext;
-    b.querySelector('.name').textContent = a.name;
-    b.querySelector('.sub').textContent = `${a.date} · ${a.author}${a.error ? ' · ⚠️ solo miniatura' : ''}`;
-    const info = document.createElement('button');
-    info.className = 'info-btn';
+    const view = el('button', 'tile-img' + (src ? '' : ' file'));
+    view.type = 'button';
+    view.setAttribute('aria-label', (src ? 'Ver ' : 'Abrir ') + a.name);
+    if (src) {
+      const img = el('img'); img.alt = ''; img.src = src; view.appendChild(img);
+    } else {
+      view.innerHTML = ICON.file;
+      const ext = (a.name.split('.').pop() || '?').toUpperCase().slice(0, 5);
+      view.appendChild(el('span', 'ext', a.url ? `${ext} · se abre en pestaña nueva` : ext));
+    }
+    view.addEventListener('click', () => openModal(i));
+    const info = el('button', 'info-btn');
     info.type = 'button';
     info.title = '¿De dónde sale este archivo?';
-    info.setAttribute('aria-label', 'Ver origen del archivo');
-    info.textContent = 'i';
+    info.setAttribute('aria-label', `Origen de ${a.name}`);
+    info.innerHTML = ICON.info;
     info.addEventListener('click', ev => { ev.stopPropagation(); showOrigin(a, info); });
-    b.appendChild(info);
-    b.addEventListener('click', () => openModal(i));
-    b.addEventListener('keydown', ev => { if (ev.key === 'Enter') openModal(i); });
-    carousel.appendChild(b);
+    const m = el('div', 'tile-meta');
+    m.appendChild(el('div', 'tile-name', a.name)).title = a.name;
+    m.appendChild(el('div', 'tile-sub', `${shortDate(a.date)} · ${a.author}`));
+    const cs = contextSummary(a);
+    const ctx = el('div', 'tile-ctx' + (cs ? '' : ' none'));
+    ctx.innerHTML = ICON.lines;
+    ctx.append(cs || 'Sin comentario asociado');
+    m.appendChild(ctx);
+    if (a.error) m.appendChild(el('div', 'tile-warn', 'Solo miniatura (no se pudo cargar)'));
+    tile.append(view, info, m);
+    carousel.appendChild(tile);
   });
   $('car-prev').onclick = () => carousel.scrollBy({ left: -carousel.clientWidth * 0.8 });
   $('car-next').onclick = () => carousel.scrollBy({ left: carousel.clientWidth * 0.8 });
@@ -267,15 +313,144 @@
     }
     return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
   }
-  const render = () => { $('text').value = buildText(); };
+  // ---------- vista formateada ----------
+  const COLORS = ['#2E44C7', '#B4532A', '#1F7A6B', '#7A3FB0', '#A3261F', '#2B6A9E', '#6B5A12', '#3D7A2B'];
+  const colorFor = name => { let x = 0; for (const c of name || '') x = (x * 31 + c.charCodeAt(0)) >>> 0; return COLORS[x % COLORS.length]; };
+  const initials = name => (name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+  // Texto con las menciones a adjuntos convertidas en etiquetas pulsables.
+  const mentionList = attachments.flatMap((a, i) => {
+    const stem = a.name.replace(/\.[^.]+$/, '');
+    return [...new Set([a.name, stem, stem.replace(/\s*\(\d+\)$/, '')])].filter(s => s.length >= 4).map(s => ({ s, i }));
+  }).sort((x, y) => y.s.length - x.s.length);
+  const mentionRe = mentionList.length
+    ? new RegExp('(' + mentionList.map(m => escRe(m.s)).join('|') + ')(?![\\w])', 'gi') : null;
+  function richText(target, text) {
+    if (!mentionRe) { target.append(text); return; }
+    let last = 0;
+    text.replace(mentionRe, (match, _g, idx) => {
+      target.append(text.slice(last, idx));
+      const hit = mentionList.find(m => m.s.toLowerCase() === match.toLowerCase());
+      const chip = el('button', 'chip');
+      chip.type = 'button';
+      chip.innerHTML = ICON.image;
+      chip.append(attachments[hit.i].name);
+      chip.addEventListener('click', () => openModal(hit.i));
+      target.appendChild(chip);
+      last = idx + match.length;
+      return match;
+    });
+    target.append(text.slice(last));
+  }
+
+  function renderDescription() {
+    const box = $('desc');
+    box.textContent = '';
+    const text = (data.description || '').trim();
+    $('desc-card').hidden = !text;
+    text.split(/\n{2,}/).forEach(par => { const p = el('p'); richText(p, par.trim()); box.appendChild(p); });
+  }
+
+  function renderTimeline() {
+    const withSystem = $('opt-system').checked;
+    const entries = (data.activity || []).filter(e => withSystem || e.isNote || (e.attachments || []).length);
+    $('act-count').textContent = `${entries.length} entradas · de la más antigua a la más reciente`;
+    const ol = $('timeline');
+    ol.textContent = '';
+    entries.forEach(e => {
+      const li = el('li', 'tl-item');
+      const rail = el('div', 'tl-rail');
+      const body = el('div', 'tl-body');
+      const isNote = e.isNote || (e.attachments || []).length;
+      if (isNote) {
+        const av = el('span', 'avatar', initials(e.author));
+        av.style.background = colorFor(e.author);
+        av.setAttribute('aria-hidden', 'true');
+        rail.appendChild(av);
+        const card = el('div', 'note');
+        const head = el('div', 'note-head');
+        const who = el('div', 'note-who');
+        who.appendChild(el('span', 'note-author', e.author || 'Sistema'));
+        if (e.type) who.appendChild(el('span', 'tag', e.type));
+        if (e.access) who.appendChild(el('span', 'tag ' + (/p[uú]blic/i.test(e.access) ? 'pub' : 'priv'), e.access));
+        head.append(who, el('time', '', shortDate(e.date)));
+        card.appendChild(head);
+        if (e.body) { const p = el('p', 'note-text'); richText(p, e.body); card.appendChild(p); }
+        if ((e.attachments || []).length) {
+          const files = el('div', 'files');
+          e.attachments.forEach(at => {
+            const idx = attachments.findIndex(x => x.entry === e && x.slot === at.slot);
+            const chip = el('button', 'file-chip');
+            chip.type = 'button';
+            chip.innerHTML = ICON.clip;
+            chip.append(at.name);
+            chip.addEventListener('click', () => idx >= 0 && openModal(idx));
+            files.appendChild(chip);
+          });
+          card.appendChild(files);
+        }
+        body.appendChild(card);
+      } else {
+        const dot = el('span', 'ev-dot'); dot.appendChild(el('span')); dot.setAttribute('aria-hidden', 'true');
+        rail.appendChild(dot);
+        const row = el('div', 'ev-row');
+        const txt = [e.type, e.action, e.body].filter(Boolean).join(' · ') || '(evento)';
+        row.append(el('span', 'ev-text', txt), el('time', '', shortDate(e.date)));
+        body.appendChild(row);
+      }
+      rail.appendChild(el('span', 'tl-line'));
+      li.append(rail, body);
+      ol.appendChild(li);
+    });
+  }
+
+  function renderSide() {
+    const withFields = $('opt-fields').checked;
+    const fields = data.fields || [];
+    const isRes = f => /^nota de resoluci/i.test(f.label);
+    const res = [...new Set(fields.filter(isRes).map(f => f.value.trim()))];
+    $('res-card').hidden = !res.length;
+    $('resolution').textContent = res.join('\n\n');
+    const rest = fields.filter(f => !isRes(f));
+    $('fields-card').hidden = !withFields || !rest.length;
+    const dl = $('fields');
+    dl.textContent = '';
+    rest.forEach(f => {
+      const row = el('div');
+      row.append(el('dt', '', f.label), el('dd', '', f.value));
+      dl.appendChild(row);
+    });
+  }
+
+  let mode = 'view';
+  function render() {
+    renderTimeline();
+    renderSide();
+    $('md').textContent = buildText();
+    $('view').hidden = mode !== 'view';
+    $('md').hidden = mode !== 'md';
+    $('mode-view').setAttribute('aria-pressed', String(mode === 'view'));
+    $('mode-md').setAttribute('aria-pressed', String(mode === 'md'));
+  }
   $('opt-system').onchange = render;
   $('opt-fields').onchange = render;
+  $('mode-view').onclick = () => { mode = 'view'; render(); };
+  $('mode-md').onclick = () => { mode = 'md'; render(); };
+  renderDescription();
   render();
 
+  let toastTimer;
   $('copy').onclick = async () => {
-    await navigator.clipboard.writeText($('text').value);
+    await navigator.clipboard.writeText(buildText());
     const b = $('copy');
-    b.textContent = '¡Copiado!'; b.classList.add('ok');
-    setTimeout(() => { b.textContent = 'Copiar'; b.classList.remove('ok'); }, 1500);
+    b.classList.add('ok');
+    $('copy-label').textContent = '¡Markdown copiado!';
+    $('toast').hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      b.classList.remove('ok');
+      $('copy-label').textContent = 'Pulsa aquí para copiar el markdown completo';
+      $('toast').hidden = true;
+    }, 1800);
   };
 })();
