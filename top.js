@@ -53,6 +53,10 @@
     #${OVERLAY_ID} .sie-ring .trk{fill:none;stroke:#E4E6EC;stroke-width:5}
     #${OVERLAY_ID} .sie-ring .fill{fill:none;stroke:#2E44C7;stroke-width:5;stroke-linecap:round;stroke-dasharray:169.65;stroke-dashoffset:127;
       transition:stroke-dashoffset ${T(550)}ms cubic-bezier(.2,.7,.2,1);animation:sie-breathe 1.6s ease-in-out infinite}
+    #${OVERLAY_ID} .sie-ring .lead{fill:none;stroke:#2E44C7;stroke-opacity:.32;stroke-width:5;stroke-linecap:round;stroke-dasharray:169.65;
+      stroke-dashoffset:var(--from,169.65);animation:sie-lead 1.3s ease-in-out infinite}
+    #${OVERLAY_ID} .sie-ring.indet .lead, #${OVERLAY_ID} .sie-ring.full .lead{display:none}
+    @keyframes sie-lead{0%,100%{stroke-dashoffset:var(--from,169.65)}50%{stroke-dashoffset:var(--to,169.65)}}
     #${OVERLAY_ID} .sie-ring.indet svg{animation:sie-spin-r 1s linear infinite}
     #${OVERLAY_ID} .sie-count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 13px/1 Inter,"Segoe UI",system-ui,sans-serif;color:#14161B;
       font-variant-numeric:tabular-nums;transition:opacity ${T(200)}ms ease}
@@ -69,7 +73,7 @@
     #${OVERLAY_ID}.dark{background:#0F1115}
     #${OVERLAY_ID}.dark .sie-status{color:#D3D7E0}
     #${OVERLAY_ID}.dark .sie-ring .trk{stroke:#262A33}
-    #${OVERLAY_ID}.dark .sie-ring .fill{stroke:#8B9BFF}
+    #${OVERLAY_ID}.dark .sie-ring .fill, #${OVERLAY_ID}.dark .sie-ring .lead{stroke:#8B9BFF}
     #${OVERLAY_ID}.dark .sie-count{color:#ECEEF3}
     #${OVERLAY_ID}.dark .sie-err-ico{background:#3A1515;color:#F59A93}
     @keyframes sie-spin{to{transform:rotate(360deg)}}`;
@@ -123,7 +127,7 @@
     overlay = document.createElement('div');
     overlay.id = OVERLAY_ID;
     overlay.innerHTML = '<div class="sie-status" role="status" aria-live="polite">' +
-      '<div class="sie-ring indet" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="27"/><circle class="fill" cx="32" cy="32" r="27"/></svg><span class="sie-count"></span></div>' +
+      '<div class="sie-ring indet" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="27"/><circle class="lead" cx="32" cy="32" r="27"/><circle class="fill" cx="32" cy="32" r="27"/></svg><span class="sie-count"></span></div>' +
       '<div class="sie-err-ico">!</div><div class="sie-text"></div></div>';
     statusEl = overlay.querySelector('.sie-status');
     textEl = overlay.querySelector('.sie-text');
@@ -147,17 +151,23 @@
     setTimeout(() => { textEl.textContent = t; textEl.classList.remove('swap'); }, T(80));
   }
 
-  // Anillo de progreso: indeterminado (gira) hasta saber cuántas páginas hay; luego se llena con "X/Y".
+  // Anillo de progreso: indeterminado (gira) hasta saber cuántas páginas hay. Después, mientras lee la
+  // página N, el anillo muestra lo ya leído (N-1) y un trazo tenue avanza y retrocede hacia N, para que se
+  // vea que sigue trabajando aunque una página tarde. Al terminar las páginas, queda completo.
   const CIRC = 169.65;
-  function setRing(page, total) {
+  function setRing(page, total, complete) {
     const ring = overlay.querySelector('.sie-ring');
     const fill = overlay.querySelector('.sie-ring .fill');
     const count = overlay.querySelector('.sie-count');
-    if (!total) { ring.classList.add('indet'); fill.style.strokeDashoffset = CIRC * 0.75; count.textContent = ''; return; }
+    if (!total) { ring.classList.add('indet'); ring.classList.remove('full'); fill.style.strokeDashoffset = CIRC * 0.75; count.textContent = ''; return; }
     ring.classList.remove('indet');
-    const done = Math.min(page, total);
-    fill.style.strokeDashoffset = CIRC * (1 - done / total);
-    count.textContent = `${done}/${total}`;
+    const cur = Math.min(Math.max(page, 1), total);
+    const read = complete ? total : cur - 1;
+    ring.classList.toggle('full', !!complete);
+    fill.style.strokeDashoffset = CIRC * (1 - read / total);
+    ring.style.setProperty('--from', CIRC * (1 - read / total));
+    ring.style.setProperty('--to', CIRC * (1 - Math.min(read + 0.85, total) / total));
+    count.textContent = `${complete ? total : cur}/${total}`;
   }
 
   function showStatus(t, isError) {
@@ -212,6 +222,7 @@
     });
     if (my !== token) return;
     cache.ready = true;
+    { const c = overlay.querySelector('.sie-count'); if (c.textContent) { const t = +c.textContent.split('/')[1]; setRing(t, t, true); } }
     statusEl.classList.remove('on');          // el spinner se desvanece…
     await wait(200);
     if (my !== token) return;
@@ -272,7 +283,7 @@
       clearTimeout(startTimer);
       setText(e.data.text || 'Analizando incidencia...');
       if (e.data.total) setRing(e.data.page, e.data.total);
-      else if (e.data.attachments) { const c = overlay.querySelector('.sie-count'); if (c.textContent) { const t = c.textContent.split('/')[1]; setRing(+t, +t); } }
+      else if (e.data.attachments) { const c = overlay.querySelector('.sie-count'); if (c.textContent) { const t = +c.textContent.split('/')[1]; setRing(t, t, true); } }
     }
     else if (e.data.sie === 'done') { clearTimeout(startTimer); showViewer(e.data.id); }
     else if (e.data.sie === 'error') {
