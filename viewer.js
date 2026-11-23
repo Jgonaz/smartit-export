@@ -545,15 +545,6 @@
     $('summary-meta').textContent = ['Generado', sm.by && `por ${sm.by}`, sm.date && `el ${sm.date}`].filter(Boolean).join(' ');
     const box = $('summary');
     renderMiniMarkdown(box, sm.markdown);
-    requestAnimationFrame(() => {
-      if (box.scrollHeight <= box.clientHeight + 4) { box.classList.remove('collapsed'); return; }
-      const btn = $('summary-toggle');
-      btn.hidden = false;
-      btn.onclick = () => {
-        const collapsed = box.classList.toggle('collapsed');
-        btn.textContent = collapsed ? 'Mostrar todo' : 'Mostrar menos';
-      };
-    });
   }
 
   function renderDescription() {
