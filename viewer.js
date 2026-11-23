@@ -387,30 +387,36 @@
   const showTeams = bounces >= 3;
 
   function renderTeams() {
-    $('teams-card').hidden = !showTeams;
-    if (!showTeams) return;
-    const distinct = [...new Set(teamSteps.map(s => s.group.toLowerCase()))];
-    $('teams-summary').textContent = `${bounces} cambios de equipo · ${distinct.length} equipos distintos`;
-    const counts = {};
     const ol = $('teams');
-    ol.textContent = '';
+    ol.hidden = !showTeams || mode !== 'view';
+    if (!showTeams || ol.childNodes.length) return;
+    const dense = teamSteps.length > 6;
+    ol.classList.toggle('dense', dense);
+    const distinct = [...new Set(teamSteps.map(s => s.group.toLowerCase()))];
+    const counts = {};
     teamSteps.forEach((s, i) => {
       const k = s.group.toLowerCase();
       counts[k] = (counts[k] || 0) + 1;
-      const li = el('li', 'team');
       if (i > 0) {
-        const arrow = el('span', 'team-arrow');
+        // La flecha va entre pasos, fuera de ellos, para que todas las tarjetas midan lo mismo.
+        const arrow = el('li', 'team-arrow');
         arrow.setAttribute('aria-hidden', 'true');
         arrow.innerHTML = svg('<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>');
-        li.appendChild(arrow);
+        ol.appendChild(arrow);
       }
+      const li = el('li', 'team');
       const box = el('div', 'team-box');
       box.style.setProperty('--tc', TEAM_COLORS[distinct.indexOf(k) % TEAM_COLORS.length]);
-      const step = el('div', 'team-step', `Paso ${i + 1}`);
+      const step = el('div', 'team-step');
+      step.appendChild(el('span', '', `Paso ${i + 1}`));
       if (counts[k] > 1) step.appendChild(Object.assign(el('span', 'team-repeat', `${counts[k]}ª vez`), { title: 'Vuelve a un equipo por el que ya pasó' }));
       if (i === teamSteps.length - 1) step.appendChild(el('span', 'team-now', 'actual'));
-      box.append(step, el('div', 'team-name', s.group),
-        el('div', 'team-when', [shortDate(s.date), s.by && `por ${s.by}`].filter(Boolean).join(' · ')));
+      const when = dense ? shortDate(s.date).replace(/\/\d{4}/, '') : shortDate(s.date);
+      const meta = el('div', 'team-meta');
+      meta.appendChild(el('div', '', when)).title = s.date;
+      if (s.by) meta.appendChild(el('div', '', `por ${s.by}`)).title = `por ${s.by}`;
+      const name = el('div', 'team-name', s.group);
+      box.append(step, name, meta);
       li.appendChild(box);
       ol.appendChild(li);
     });
@@ -497,6 +503,7 @@
 
   let mode = 'view';
   function render() {
+    renderTeams();
     renderTimeline();
     renderSide();
     $('md').textContent = buildText();
@@ -510,7 +517,6 @@
   $('mode-view').onclick = () => { mode = 'view'; render(); };
   $('mode-md').onclick = () => { mode = 'md'; render(); };
   renderDescription();
-  renderTeams();
   render();
 
   let toastTimer;
