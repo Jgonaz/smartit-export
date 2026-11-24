@@ -130,6 +130,23 @@
     }, 350);
   });
 
+  // En la ventanita, el alto se ajusta al contenido (sin pasar del alto de la pantalla).
+  if (fromSave) {
+    const fit = async () => {
+      try {
+        const win = await chrome.windows.getCurrent();
+        const chromeH = window.outerHeight - window.innerHeight;
+        const contentH = document.querySelector('.opt-wrap').offsetHeight + document.querySelector('.opt-foot').offsetHeight;
+        const h = Math.min(screen.availHeight, Math.ceil(contentH + chromeH));
+        if (Math.abs(h - win.height) < 4) return;
+        const top = Math.max(screen.availTop || 0, Math.round(win.top + (win.height - h) / 2));
+        await chrome.windows.update(win.id, { height: h, top });
+      } catch (_) { /* fuera de una ventana de la extensión */ }
+    };
+    let fitT;
+    new ResizeObserver(() => { clearTimeout(fitT); fitT = setTimeout(fit, 60); }).observe(document.querySelector('.opt-wrap'));
+  }
+
   const { st } = await render();
   if (fromSave && st === 'prompt') $('grant').focus(); else if (fromSave) $('pick').focus();
 })();

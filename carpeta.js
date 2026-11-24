@@ -35,8 +35,11 @@ const SieCarpeta = (() => {
   const safe = n => String(n).normalize('NFC').replace(/[\\/:*?"<>|]+/g, '_').replace(/^\.+/, '_').trim() || 'archivo';
 
   // files: [{ path: 'incidencia.md', text } | { path: 'adjuntos/x.png', dataUrl }]
+  // Al volver a guardar: incidencia.md se reescribe y adjuntos/ se rehace para que coincida con la
+  // incidencia actual. El resto de lo que haya en la carpeta (notas del agente, etc.) no se toca.
   async function write(handle, folder, files) {
     const base = await handle.getDirectoryHandle(safe(folder), { create: true });
+    try { await base.removeEntry('adjuntos', { recursive: true }); } catch (_) { /* no existía */ }
     for (const f of files) {
       const parts = f.path.split('/').map(safe);
       let dir = base;

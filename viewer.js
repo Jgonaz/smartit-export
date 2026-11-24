@@ -812,10 +812,10 @@
   $('copy').onclick = async () => {
     await navigator.clipboard.writeText(buildText());
     const b = $('copy');
-    b.classList.add('ok');
-    $('copy-label').textContent = '¡Copiado!';
+    morphButton(b, $('copy-label'), '¡Copiado!', 'ok');
     toast('Markdown copiado al portapapeles');
-    setTimeout(() => { b.classList.remove('ok'); $('copy-label').textContent = 'Copiar para el agente'; }, 1800);
+    clearTimeout(b._resetT);
+    b._resetT = setTimeout(() => morphButton(b, $('copy-label'), 'Copiar para el agente'), 1800);
   };
 
 
@@ -862,33 +862,66 @@
     return SieCarpeta.prompt({ agentPath, folderName: r.folderName, folder: r.folder, number: h.number, summary: h.summary });
   }
   // Copia el prompt; si el navegador no lo permite (la ventana no tiene el foco), ofrece un botón.
+  const PASTE = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘V' : 'Ctrl+V';
   async function copyPrompt(r, savedText) {
     const text = await promptFor(r);
     try {
       await navigator.clipboard.writeText(text);
-      toast(`${savedText} Prompt para el agente copiado.`, { ms: 4000 });
+      toast(`${savedText}\nPrompt para el agente listo para pegar (${PASTE}).`, { ms: 4500 });
     } catch (_) {
       toast(savedText, { action: 'Copiar prompt', onAction: async () => {
         await navigator.clipboard.writeText(text);
-        toast('Prompt para el agente copiado.');
+        toast(`Prompt para el agente listo para pegar (${PASTE}).`);
       } });
     }
   }
 
-  let pendingToken = null;
-  const saveLabel = (t, reset) => {
-    $('save-label').textContent = t;
-    if (reset) setTimeout(() => { $('save-label').textContent = 'Guardar'; $('save').disabled = false; }, 1800);
+  // ---------- transición suave de los botones (texto, ancho e icono) ----------
+  const BTN_ICON = {
+    busy: '<circle cx="12" cy="12" r="8" stroke-opacity=".25"/><path d="M12 4a8 8 0 0 1 8 8"/>',
+    ok: '<path class="draw" d="M5 12.5l4.5 4.5L19 7.5"/>',
+    err: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.5"/>'
+  };
+  const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function morphButton(btn, label, text, state) {
+    const ico = btn.querySelector('svg.ico');
+    if (!btn.dataset.icon) btn.dataset.icon = ico.innerHTML;
+    const from = btn.getBoundingClientRect().width;
+    label.textContent = text;
+    ico.innerHTML = state ? BTN_ICON[state] : btn.dataset.icon;
+    ico.classList.toggle('spin', state === 'busy');
+    btn.classList.toggle('ok', state === 'ok');
+    btn.classList.toggle('bad', state === 'err');
+    if (reduceMotion()) return;
+    // FLIP del ancho: del tamaño anterior al nuevo, sin saltos.
+    btn.style.width = 'auto';
+    const to = btn.getBoundingClientRect().width;
+    btn.style.width = from + 'px';
+    void btn.offsetWidth;
+    btn.style.transition = 'width .28s cubic-bezier(.2,.8,.2,1), transform .12s ease, box-shadow .2s ease, background-color .2s ease';
+    btn.style.width = to + 'px';
+    clearTimeout(btn._morphT);
+    btn._morphT = setTimeout(() => { btn.style.width = ''; btn.style.transition = ''; }, 320);
+    label.classList.remove('swap-in'); ico.classList.remove('swap-in');
+    void label.offsetWidth;
+    label.classList.add('swap-in'); ico.classList.add('swap-in');
+  }
+
+  let pendingToken = null, saveResetT;
+  const saveLabel = (t, reset, state) => {
+    clearTimeout(saveResetT);
+    morphButton($('save'), $('save-label'), t, state);
+    if (reset) saveResetT = setTimeout(() => { morphButton($('save'), $('save-label'), 'Guardar'); $('save').disabled = false; }, 2200);
   };
   $('save').onclick = async () => {
     const btn = $('save');
     btn.disabled = true;
-    saveLabel('Guardando…');
+    saveLabel('Guardando…', false, 'busy');
     try {
       const { folder, files } = filesToSave();
       const r = await chrome.runtime.sendMessage({ type: 'save-files', folder, files });
       if (r && r.ok) {
-        saveLabel('Guardado', true);
+        saveLabel('Guardado', true, 'ok');
         await copyPrompt(r, `Guardado en ${r.folderName}/${r.folder}.`);
         refreshFolder();
         return;
@@ -898,13 +931,13 @@
         pendingToken = crypto.randomUUID();
         await chrome.storage.local.set({ pendingSave: { token: pendingToken, folder, files } });
         await chrome.runtime.sendMessage({ type: 'open-options', save: true, reason: r.reason });
-        saveLabel(r.reason === 'no-folder' ? 'Elige la carpeta…' : 'Da permiso…');
+        saveLabel(r.reason === 'no-folder' ? 'Elige la carpeta…' : 'Da permiso…', false, 'busy');
         return;
       }
       throw new Error((r && r.error) || 'sin respuesta');
     } catch (err) {
       console.error('[SmartIT export]', err);
-      saveLabel('Error al guardar', true);
+      saveLabel('Error al guardar', true, 'err');
       toast('No se pudo guardar: ' + (err.message || err), { error: true, ms: 5000 });
     }
   };
@@ -915,8 +948,8 @@
       const r = changes.lastSave.newValue;
       if (!r || r.token !== pendingToken) return;
       pendingToken = null;
-      if (r.ok) { saveLabel('Guardado', true); await copyPrompt(r, `Guardado en ${r.folderName}/${r.folder}.`); }
-      else { saveLabel('Error al guardar', true); toast('No se pudo guardar: ' + r.error, { error: true, ms: 5000 }); }
+      if (r.ok) { saveLabel('Guardado', true, 'ok'); await copyPrompt(r, `Guardado en ${r.folderName}/${r.folder}.`); }
+      else { saveLabel('Error al guardar', true, 'err'); toast('No se pudo guardar: ' + r.error, { error: true, ms: 5000 }); }
       refreshFolder();
     });
   } catch (_) {}
