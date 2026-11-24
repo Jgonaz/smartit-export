@@ -642,8 +642,9 @@
       if (e.access && !/p[uú]blic/i.test(e.access)) meta.appendChild(el('span', 'priv', e.access));
       const b = el('div', 'bubble');
       b.style.setProperty('--sh', cust ? 'var(--pink)' : (step ? teamColor(step.group) : 'var(--sky)'));
-      const who = el('div', 'bubble-title', e.author || 'Sistema');
-      if (team) who.appendChild(el('span', 'bubble-team', ` · ${team}`));
+      // Equipo en negrita y después la persona («Run The Business · Jorge González»); el cliente, solo su nombre.
+      const who = el('div', 'bubble-title', team || e.author || 'Sistema');
+      if (team) who.appendChild(el('span', 'bubble-person', ` · ${e.author || 'Sistema'}`));
       b.appendChild(who);
       const generic = hasFiles && isGenericBody(e.body, e.attachments.map(x => x.name));
       if (e.body && !generic) bubbleContent(b, e.body);

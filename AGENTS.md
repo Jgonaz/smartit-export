@@ -44,6 +44,7 @@ La ficha de la incidencia vive en un iframe (`/arsys/pwa/…`), no en la página
 - **Actividad:** celdas `smt-table-cell-field`. Cada nota es un iframe `iframe[id^="VFWLG"]` con `#content_block` (texto), `#date-block` y `#first-attachement-name` (sic) para el primer adjunto.
 - **Paginación:** botones `[data-testid$="-pagination_right"]` / `_left`. El texto de estado está en un `[aria-live]`, del tipo "Registros desde 1 hasta 15 de 110". De ahí se calcula el total de páginas para el anillo "X/Y".
 - **Resumen de HelixGPT:** `.helixGptChat-summary-response-content` (se lee completo aunque no se haya pulsado "Mostrar más"), autor en `#summaryGeneratedBy_data` y fecha en `.helixGptChat-summary-right-button-group`. Se convierte a un Markdown sencillo (listas anidadas y negritas).
+- **Pestaña en segundo plano:** Chrome retrasa mucho los temporizadores de las pestañas ocultas (hasta una vez por minuto). Por eso `waitFor()` en `content.js` vuelve a comprobar al cambiar el DOM (MutationObserver, también dentro de los iframes de las notas) y no solo con `setTimeout`. Por lo mismo, las animaciones de la capa de carga son CSS y no dependen de temporizadores.
 - **Fechas:** formato `d/m/aaaa h:mm[:ss]`, con día, mes y hora que pueden ser de **un dígito** (`9:22:28`). Regex usada: `(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?`. Las entradas con la misma marca de tiempo se ordenan por el orden inverso de lectura (campo `seq`).
 
 ### Recorrido entre equipos y estados (texto de la actividad)
@@ -74,7 +75,7 @@ Si la respuesta es HTML o JSON cuando no debería, se trata como error y el viso
   - El ancho de cada nombre se ajusta al hueco entre paradas.
 - **Conversación:**
   - La descripción es el primer mensaje del cliente. Si no hay más mensajes, ocupa todo el ancho.
-  - Encima de cada burbuja va el tipo de comentario y el equipo («Investigación-Diagnóstico · Equipo»). Dentro, el autor arriba y la fecha y hora abajo a la derecha.
+  - Encima de cada burbuja va solo el tipo de comentario («Investigación-Diagnóstico»). Dentro, arriba, el equipo en negrita y la persona («Equipo · Nombre»; el cliente, solo su nombre), y la fecha y hora abajo a la derecha.
   - Las notas del cliente (tipo "Comunicación del cliente" o autor igual al Cliente/Contacto de la ficha) van a la izquierda. Las de agentes van a la derecha, con el color del equipo que tenía la incidencia en ese momento.
   - Los cambios de grupo son píldoras, los estados son líneas grises y los huecos de más de 2 h se muestran como "X sin actividad".
 - **Tiempo:** el total va desde la creación hasta ahora, o hasta el último cierre si está cerrada. "Sin actividad" es la suma de huecos de más de 2 h entre entradas; las asignaciones automáticas también cuentan como actividad.

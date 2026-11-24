@@ -23,13 +23,47 @@
   // ---------- utilidades ----------
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-  async function waitFor(fn, timeout = 20000, step = 250) {
-    const t0 = Date.now();
-    while (Date.now() - t0 < timeout) {
-      try { const v = fn(); if (v) return v; } catch (_) { /* reintenta */ }
-      await sleep(step);
-    }
-    return null;
+  // Espera a que fn() devuelva algo. No depende solo de temporizadores: con la pestaña en segundo plano
+  // Chrome los retrasa mucho (hasta una vez por minuto), y la exportación parecía colgada. Por eso se
+  // vuelve a comprobar en cuanto cambia algo en la página (MutationObserver) o termina de cargar un
+  // iframe de nota; el temporizador queda solo como respaldo.
+  function waitFor(fn, timeout = 20000, step = 250) {
+    return new Promise(resolve => {
+      const t0 = Date.now();
+      let done = false, queued = false, timer = null;
+      const finish = v => {
+        if (done) return;
+        done = true;
+        mo.disconnect();
+        document.removeEventListener('load', onLoad, true);
+        clearTimeout(timer);
+        resolve(v);
+      };
+      // También se observa dentro de los iframes de las notas (misma web), donde SmartIT rellena la fecha.
+      const seen = new WeakSet();
+      const watchFrames = () => {
+        for (const f of document.querySelectorAll('iframe')) {
+          try {
+            const d = f.contentDocument;
+            if (d && d.documentElement && !seen.has(d)) { seen.add(d); mo.observe(d.documentElement, { subtree: true, childList: true, characterData: true }); }
+          } catch (_) { /* de otro origen: no se puede observar */ }
+        }
+      };
+      const check = () => {
+        queued = false;
+        if (done) return;
+        watchFrames();
+        try { const v = fn(); if (v) return finish(v); } catch (_) { /* reintenta */ }
+        if (Date.now() - t0 >= timeout) finish(null);
+      };
+      const soon = () => { if (!queued) { queued = true; queueMicrotask(check); } };
+      const onLoad = () => soon();
+      const mo = new MutationObserver(soon);
+      mo.observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true });
+      document.addEventListener('load', onLoad, true); // los iframes de las notas avisan al cargar
+      const tick = () => { check(); if (!done) timer = setTimeout(tick, step); };
+      tick();
+    });
   }
 
   // Texto de un elemento respetando los <br> como saltos de línea.

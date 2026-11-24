@@ -69,9 +69,9 @@
       font:700 12px/1 "SIE JetBrains Mono","JetBrains Mono",Consolas,ui-monospace,monospace;color:var(--ink);
       font-variant-numeric:tabular-nums;transition:opacity ${T(200)}ms ease}
     @keyframes sie-spin-r{from{transform:rotate(-90deg)}to{transform:rotate(270deg)}}
-    #${OVERLAY_ID} .sie-text{min-height:21px;color:var(--grey);transition:opacity ${T(180)}ms ease, transform ${T(220)}ms cubic-bezier(.2,.7,.2,1)}
-    #${OVERLAY_ID} .sie-text.out{opacity:0;transform:translateY(-6px)}
-    #${OVERLAY_ID} .sie-text.pre{opacity:0;transform:translateY(6px);transition:none}
+    #${OVERLAY_ID} .sie-text{min-height:21px;color:var(--grey)}
+    #${OVERLAY_ID} .sie-text.enter{animation:sie-text-in ${T(420)}ms cubic-bezier(.2,.7,.2,1)}
+    @keyframes sie-text-in{0%{opacity:0;transform:translateY(7px)}100%{opacity:1;transform:none}}
     #${OVERLAY_ID} .sie-status.err .sie-ring{display:none}
     #${OVERLAY_ID} .sie-status.err .sie-card{box-shadow:9px 9px 0 var(--salmon)}
     #${OVERLAY_ID} .sie-err-ico{display:none;flex:none;width:48px;height:48px;border-radius:50%;border:2px solid var(--ink);background:var(--salmon);color:var(--ink);
@@ -198,24 +198,19 @@
     waitT = setTimeout(tick, 2600);
   }
 
-  // Cambio de frase animado: la actual sube y se desvanece, la nueva entra desde abajo.
-  let textT = null, nextText = null;
+  // Cambio de frase: el texto se cambia al momento y entra con una animación CSS (sube y aparece).
+  // No se usan temporizadores: con la pestaña en segundo plano Chrome los retrasa y la frase podía
+  // quedarse oculta a mitad del cambio. Las animaciones CSS van por tiempo: al volver a la pestaña
+  // ya han terminado y el texto se ve.
   function setText(t) {
-    if (!textEl) return;
-    nextText = t;
-    if (textT) return; // ya hay un cambio en marcha: al terminar pondrá la última frase pedida
-    if (textEl.textContent === t) return;
-    if (!textEl.textContent) { textEl.textContent = t; return; }
-    textEl.classList.add('out');
-    textT = setTimeout(() => {
-      textEl.classList.remove('out');
-      textEl.classList.add('pre');
-      textEl.textContent = nextText;
-      void textEl.offsetWidth;
-      textEl.classList.remove('pre');
-      textT = setTimeout(() => { textT = null; if (nextText !== textEl.textContent) setText(nextText); }, T(220));
-    }, T(180));
+    if (!textEl || textEl.textContent === t) return;
+    textEl.textContent = t;
+    if (document.hidden) return;
+    textEl.classList.remove('enter');
+    void textEl.offsetWidth;
+    textEl.classList.add('enter');
   }
+
 
   // Anillo de progreso: indeterminado (gira) hasta saber cuántas páginas hay. Después, mientras lee la
   // página N, el anillo muestra lo ya leído (N-1) y su extremo se estira un poco y vuelve, para que se vea
@@ -241,8 +236,7 @@
   function showStatus(t, isError) {
     statusEl.classList.toggle('err', !!isError);
     overlay.querySelector('.sie-h').textContent = isError ? 'No se pudo exportar' : 'Exportando incidencia';
-    clearTimeout(textT); textT = null; nextText = t;
-    textEl.classList.remove('out', 'pre');
+    textEl.classList.remove('enter');
     textEl.textContent = t;
     statusEl.classList.add('on');
   }
