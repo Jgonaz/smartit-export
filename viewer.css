@@ -91,16 +91,16 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .tags { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .tags-ico { width: 16px; height: 16px; color: var(--grey); margin-right: 2px; }
 .tag-list { display: contents; }
-.tag { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 4px 0 10px; border: var(--bw) solid var(--border); border-radius: 999px; background: var(--tc, var(--card)); color: #161616; font-size: 13px; font-weight: 600; animation: tag-in .22s cubic-bezier(.2,.8,.2,1.2); }
+.tag { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 4px 0 10px; border: var(--bw) solid var(--border); border-radius: 999px; background: color-mix(in srgb, var(--tc, #fff) 62%, #fff); color: #161616; font-size: 13px; font-weight: 600; animation: tag-in .22s cubic-bezier(.2,.8,.2,1.2); }
 @keyframes tag-in { from { opacity: 0; transform: scale(.85); } }
 .tag button { width: 18px; height: 18px; border: 0; border-radius: 50%; background: transparent; color: rgba(22, 22, 22, .6); cursor: pointer; font: 700 13px/1 system-ui, sans-serif; display: flex; align-items: center; justify-content: center; }
 .tag button:hover { background: rgba(22, 22, 22, .1); color: #161616; }
-html[data-theme="dark"] .tag { border-color: transparent; }
+html[data-theme="dark"] .tag { border-color: transparent; background: color-mix(in srgb, var(--tc, #fff) 80%, #fff); }
 .tag-input { height: 26px; width: 150px; padding: 0 10px; border: var(--bw) dashed var(--grey); border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; }
 .tag-input:focus { outline: none; border-style: solid; border-color: var(--ink); background: var(--card); }
 .tag-note { font-size: 12.5px; margin-left: 4px; }
-html[data-style="classic"] .tag { border: 0; background: color-mix(in srgb, var(--tc) 70%, var(--card)); color: #2A2D35; font-weight: 500; }
-html[data-style="classic"][data-theme="dark"] .tag { background: color-mix(in srgb, var(--tc) 82%, #000); color: #14161B; }
+html[data-style="classic"] .tag { border: 0; background: color-mix(in srgb, var(--tc) 50%, var(--card)); color: #2A2D35; font-weight: 500; }
+html[data-style="classic"][data-theme="dark"] .tag { background: color-mix(in srgb, var(--tc) 92%, #000); color: #14161B; }
 html[data-style="classic"] .tag-input { border-width: 1px; }
 html[data-style="classic"] .tag-input:focus { border-color: var(--accent); }
 
