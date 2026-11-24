@@ -867,11 +867,11 @@
     const text = await promptFor(r);
     try {
       await navigator.clipboard.writeText(text);
-      toast(`${savedText}\nPrompt para el agente listo para pegar (${PASTE}).`, { ms: 4500 });
+      toast(`${savedText}\nPrompt listo para pegar en el agente (${PASTE}).`, { ms: 4500 });
     } catch (_) {
       toast(savedText, { action: 'Copiar prompt', onAction: async () => {
         await navigator.clipboard.writeText(text);
-        toast(`Prompt para el agente listo para pegar (${PASTE}).`);
+        toast(`Prompt listo para pegar en el agente (${PASTE}).`);
       } });
     }
   }
