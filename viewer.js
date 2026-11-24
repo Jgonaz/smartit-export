@@ -967,6 +967,7 @@
             }
           });
         } else if (it.equipo) li.appendChild(el('div', 'rel-why', `Equipo: ${it.equipo}. Sin solución anotada todavía.`));
+        if (it.confluence_url) { const a = el('a', 'rel-more rel-conf', 'Ver en Confluence'); a.href = it.confluence_url; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); }
         list.appendChild(li);
       });
       // Solo las 3 más parecidas a la vista; el resto, al pulsar «Ver N más» (con scroll propio).

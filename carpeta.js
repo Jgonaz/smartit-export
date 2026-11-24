@@ -85,7 +85,7 @@ const SieCarpeta = (() => {
   }
 
   // ---------- archivos de la raíz de la carpeta ----------
-  const MARK = '<!-- generado por SmartIT export, v1. Si editas este archivo a mano, borra esta línea para que la extensión no lo vuelva a escribir. -->';
+  const MARK = '<!-- generado por SmartIT export, v2. Si editas este archivo a mano, borra esta línea para que la extensión no lo vuelva a escribir. -->';
   const AGENTS_MD = `${MARK}
 # Incidencias guardadas desde SmartIT
 
@@ -95,8 +95,9 @@ Cada subcarpeta es una incidencia (su número), guardada con la extensión «Sma
 INC000012345678/
   incidencia.md      ficha, descripción y toda la actividad (se regenera al volver a guardar)
   adjuntos/          imágenes y archivos de la incidencia (se regenera al volver a guardar)
-  clasificacion.md   etiquetas, causa y solución (lo mantienen la persona y el agente; no se borra)
-indice.md            una fila por incidencia: título, servicio, equipo, etiquetas y solución
+  clasificacion.md   etiquetas, causa, solución y estado en Confluence (lo mantienen la persona y el agente; no se borra)
+  diagnostico.md     registro del diagnóstico, si lo hay (lo mantiene el agente; no se borra)
+indice.md            una fila por incidencia: título, servicio, equipo, etiquetas, solución y Confluence
 indice.jsonl         lo mismo, una línea JSON por incidencia (para buscar con grep / jq)
 etiquetas.md         vocabulario de etiquetas con su significado
 \`\`\`
@@ -119,6 +120,7 @@ Rellena o actualiza el \`clasificacion.md\` de la incidencia:
 - \`etiquetas\`: usa las de \`etiquetas.md\`. Si de verdad hace falta una nueva, añádela allí con una línea que la explique.
   Formato: minúsculas y guiones (\`correo-no-llega\`), sin sinónimos de una ya existente.
 - \`causa\` y \`solucion\`: una o dos frases, lo bastante concretas para que sirvan la próxima vez.
+- \`confluence\`: \`pendiente\`, \`no-necesaria\` o \`documentada\`. Al documentarla en Confluence, pon \`documentada\`, \`confluence_url\` y \`confluence_fecha\` (AAAA-MM-DD). Antes de documentar una, mira si una parecida ya tiene \`confluence_url\`.
 - Debajo del bloque puedes escribir notas libres.
 
 No modifiques \`incidencia.md\` ni \`adjuntos/\`: se sobrescriben al volver a guardar desde SmartIT.
@@ -182,15 +184,16 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
         equipo: d.equipo_resolutor || d.equipo_actual || '', abierta: d.abierta || '',
         activo: d.activo || '', url: d.url || '',
         etiquetas: uniqTags([].concat(c.etiquetas || [], d.etiquetas || [])),
-        causa: c.causa || '', solucion: c.solucion || d.resolucion || ''
+        causa: c.causa || '', solucion: c.solucion || d.resolucion || '',
+        confluence: c.confluence || '', confluence_url: c.confluence_url || ''
       });
     }
     const key = r => { const m = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(r.abierta); return m ? +m[3] * 1e4 + +m[2] * 100 + +m[1] : 0; };
     rows.sort((a, b) => key(b) - key(a) || (a.incidencia < b.incidencia ? 1 : -1));
     const cell = v => String(v || '').replace(/\|/g, '\\|').replace(/\s+/g, ' ').trim();
     const md = '# Índice de incidencias\n\nSe regenera al guardar desde SmartIT. Cómo usarlo: ver `AGENTS.md`.\n\n' +
-      '| Incidencia | Título | Servicio | Equipo | Etiquetas | Solución | Estado | Abierta |\n|---|---|---|---|---|---|---|---|\n' +
-      rows.map(r => `| [${cell(r.incidencia)}](${encodeURI(r.carpeta)}/incidencia.md) | ${cell(r.titulo)} | ${cell(r.servicio)} | ${cell(r.equipo)} | ${cell(r.etiquetas.join(', '))} | ${cell(r.solucion)} | ${cell(r.estado)} | ${cell(r.abierta)} |`).join('\n') + '\n';
+      '| Incidencia | Título | Servicio | Equipo | Etiquetas | Solución | Confluence | Estado | Abierta |\n|---|---|---|---|---|---|---|---|---|\n' +
+      rows.map(r => `| [${cell(r.incidencia)}](${encodeURI(r.carpeta)}/incidencia.md) | ${cell(r.titulo)} | ${cell(r.servicio)} | ${cell(r.equipo)} | ${cell(r.etiquetas.join(', '))} | ${cell(r.solucion)} | ${r.confluence_url ? `[${cell(r.confluence || 'documentada')}](${r.confluence_url})` : cell(r.confluence)} | ${cell(r.estado)} | ${cell(r.abierta)} |`).join('\n') + '\n';
     await writeText(root, 'indice.md', md);
     await writeText(root, 'indice.jsonl', rows.map(r => JSON.stringify(r)).join('\n') + (rows.length ? '\n' : ''));
     return rows;
@@ -263,6 +266,7 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
     const clas = { ...prev.data, etiquetas: tags };
     if (!('causa' in clas)) clas.causa = '';
     if (!('solucion' in clas)) clas.solucion = '';
+    if (!('confluence' in clas)) clas.confluence = 'pendiente';
     const clasBody = prev.body.trim() ? prev.body : '\nNotas libres sobre la causa y la solución (las mantiene la persona o el agente; la extensión no las borra).\n';
     await writeText(base, 'clasificacion.md', FM.stringify(clas, true) + clasBody);
 
