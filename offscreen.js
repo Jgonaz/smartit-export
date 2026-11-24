@@ -17,8 +17,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'related') {
     (async () => {
       const h = await SieCarpeta.get();
-      if (!h || (await SieCarpeta.status(h)) !== 'granted') return { ok: false };
-      return { ok: true, items: await SieCarpeta.related(h, msg.current || {}) };
+      if (!h) return { ok: false, reason: 'no-folder' };
+      if ((await SieCarpeta.status(h)) !== 'granted') return { ok: false, reason: 'permission' };
+      const items = await SieCarpeta.related(h, msg.current || {});
+      return { ok: true, items, total: SieCarpeta.related.total || 0 };
     })().then(sendResponse, () => sendResponse({ ok: false }));
     return true;
   }

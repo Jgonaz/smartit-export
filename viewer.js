@@ -899,8 +899,21 @@
       let r;
       try { r = await chrome.runtime.sendMessage({ type: 'related', current: { folder: fileSafe(h.number || 'incidencia'), frontmatter: frontmatter(), tags: tagState.tags } }); } catch (_) { return; }
       const card = $('related-card'), list = $('related');
-      if (!r || !r.ok || !r.items || !r.items.length) { card.hidden = true; return; }
       list.textContent = '';
+      card.hidden = false;
+      // Sin resultados se explica por qué, para que se sepa dónde aparecerán.
+      const empty = text => { const li = el('li', 'rel-empty', text); list.appendChild(li); };
+      if (!r || !r.ok) {
+        if (r && r.reason === 'permission') empty('Falta el permiso de la carpeta: pulsa «Guardar» para darlo y aquí aparecerán las incidencias parecidas.');
+        else empty('Aparecerán aquí cuando guardes incidencias con «Guardar»: se buscan entre las de tu carpeta.');
+        return;
+      }
+      if (!r.items || !r.items.length) {
+        empty(r.total > 1
+          ? `Ninguna parecida entre las ${r.total} incidencias guardadas. Añade etiquetas para encontrarlas mejor.`
+          : 'Todavía no hay otras incidencias guardadas en tu carpeta.');
+        return;
+      }
       r.items.forEach(it => {
         const li = el('li');
         const head = el('div', 'rel-head');

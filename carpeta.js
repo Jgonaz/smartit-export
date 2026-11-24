@@ -164,7 +164,17 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
       if (h.kind !== 'directory') continue;
       const inc = await readText(h, 'incidencia.md');
       if (inc == null) continue;
-      const d = FM.parse(inc).data;
+      const parsed = FM.parse(inc);
+      const d = parsed.data;
+      // Incidencias guardadas con versiones anteriores (sin bloque de datos): se saca lo básico del texto.
+      if (!d.titulo) {
+        const t = /^#\s+(\S+)\s+[—-]\s+(.+)$/m.exec(parsed.body);
+        if (t) { d.incidencia = d.incidencia || t[1]; d.titulo = t[2].trim(); }
+        const st = /^Estado:\s*(.+)$/m.exec(parsed.body); if (st && !d.estado) d.estado = st[1].trim();
+        const cr = /^Fecha de creación:\s*(.+)$/m.exec(parsed.body); if (cr && !d.abierta) d.abierta = cr[1].trim();
+        const sv = /^- Servicio:\s*(.+)$/m.exec(parsed.body); if (sv && !d.servicio) d.servicio = sv[1].trim();
+        const url = /^URL:\s*(\S+)/m.exec(parsed.body); if (url && !d.url) d.url = url[1];
+      }
       const c = FM.parse((await readText(h, 'clasificacion.md')) || '').data;
       rows.push({
         incidencia: d.incidencia || name, carpeta: name, titulo: d.titulo || '', estado: d.estado || '',
@@ -193,7 +203,8 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
   const words = t => new Set(String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !STOP.has(w)));
   async function related(handle, cur, limit = 6) {
-    const jsonl = (await readText(handle, 'indice.jsonl')) || '';
+    let jsonl = await readText(handle, 'indice.jsonl');
+    if (jsonl == null) { try { await rebuildIndex(handle); jsonl = (await readText(handle, 'indice.jsonl')) || ''; } catch (_) { jsonl = ''; } }
     const tags = uniqTags(cur.tags || []);
     const fm = cur.frontmatter || {};
     const me = safe(cur.folder || '');
@@ -214,6 +225,7 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
       if (score >= 3) out.push({ ...r, shared, reasons, score });
     });
     out.sort((a, b) => b.score - a.score || (b.solucion ? 1 : 0) - (a.solucion ? 1 : 0));
+    related.total = jsonl.split('\n').filter(Boolean).length;
     return out.slice(0, limit);
   }
 
