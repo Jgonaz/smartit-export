@@ -138,6 +138,8 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .bubble p { margin: 0; white-space: pre-line; }
 .bubble p + p, .bubble p + div, .bubble div + p { margin-top: 8px; }
 .bubble-title { font-family: var(--mono); font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.bubble-date { margin-top: 8px; text-align: right; font-size: 12px; color: var(--grey); font-variant-numeric: tabular-nums; }
+.msg.full .bubble { max-width: none; width: 100%; }
 .handoff, .gap, .event { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 13px; }
 .handoff::before, .handoff::after { content: ""; flex: 1; height: 1px; background: var(--hair); }
 .handoff span { display: inline-flex; align-items: center; gap: 8px; border: var(--bw) solid var(--border); border-radius: 999px; padding: 4px 12px 4px 6px; background: var(--card); }
@@ -334,7 +336,7 @@ html[data-style="classic"] .msg.r .bubble { border-top-right-radius: 4px; box-sh
 html[data-style="classic"] .msg:not(.r) .bubble { border-top-left-radius: 4px; }
 html[data-style="classic"][data-theme="dark"] .bubble { box-shadow: inset 3px 0 0 var(--sh); }
 html[data-style="classic"][data-theme="dark"] .msg.r .bubble { box-shadow: inset -3px 0 0 var(--sh); }
-html[data-style="classic"] .bubble-title { font-weight: 600; color: var(--grey); }
+html[data-style="classic"] .bubble-title { font-weight: 600; color: var(--ink); }
 html[data-style="classic"] .handoff span { border: 1px solid var(--border); font-weight: 500; }
 html[data-style="classic"] .handoff .swatch { border: 0; width: 10px; height: 10px; border-radius: 50%; }
 html[data-style="classic"] .gap span { font-weight: 600; border: 0; border-radius: 999px; padding: 3px 12px; }

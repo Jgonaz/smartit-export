@@ -28,7 +28,7 @@ Guía para agentes (y personas) que retomen este repositorio. Recoge lo que se a
 ### Mensajes entre marcos (`postMessage`, campo `sie`)
 
 - Ficha → página: `ready` (cada 700 ms, indica si la ficha ya cargó; el icono solo aparece entonces y si la URL es de una ficha `#/…PV/…`).
-- Página → ficha: `export`. Respuestas: `started`, `progress` (texto, `page`/`total` al leer páginas), `done` (con el id de la exportación) o `error`.
+- Página → ficha: `export`. Respuestas: `started`, `progress` (texto, `page`/`total` al leer páginas), `done` (con el id de la exportación) o `error`. Si pasan unos segundos sin progreso al leer páginas, `top.js` va rotando frases de espera para que no parezca colgado.
 - Visor → página: `viewer-ready` (ya pintado, se muestra con la animación), `viewer-close` (Esc), `update-dismissed`.
 - `top.js` solo acepta mensajes de orígenes `*.onbmc.com`.
 
@@ -73,7 +73,8 @@ Si la respuesta es HTML o JSON cuando no debería, se trata como error y el viso
   - Al saltar de fila, un chevron "›" sutil al final de una fila y al principio de la siguiente. El tiempo de ese tramo va en el tooltip del chevron.
   - El ancho de cada nombre se ajusta al hueco entre paradas.
 - **Conversación:**
-  - La descripción es el primer mensaje del cliente.
+  - La descripción es el primer mensaje del cliente. Si no hay más mensajes, ocupa todo el ancho.
+  - Encima de cada burbuja va el tipo de comentario y el equipo («Investigación-Diagnóstico · Equipo»). Dentro, el autor arriba y la fecha y hora abajo a la derecha.
   - Las notas del cliente (tipo "Comunicación del cliente" o autor igual al Cliente/Contacto de la ficha) van a la izquierda. Las de agentes van a la derecha, con el color del equipo que tenía la incidencia en ese momento.
   - Los cambios de grupo son píldoras, los estados son líneas grises y los huecos de más de 2 h se muestran como "X sin actividad".
 - **Tiempo:** el total va desde la creación hasta ahora, o hasta el último cierre si está cerrada. "Sin actividad" es la suma de huecos de más de 2 h entre entradas; las asignaciones automáticas también cuentan como actividad.

@@ -181,6 +181,22 @@
     overlay.style.top = top + 'px';
   }
 
+  // Si una página tarda, el texto va rotando entre varias frases para que no parezca colgado.
+  // Cualquier progreso real (página nueva, adjuntos) lo reinicia.
+  const WAIT_LINES = ['Leyendo comentarios...', 'Revisando notas y cambios de estado...', 'Esperando a que SmartIT cargue la página...', 'Ordenando la actividad...', 'Analizando páginas de la incidencia...'];
+  let waitT = null, waitI = 0;
+  function stopWaitLines() { clearTimeout(waitT); waitT = null; }
+  function startWaitLines() {
+    stopWaitLines();
+    waitI = 0;
+    const tick = () => {
+      if (state !== 'loading') return stopWaitLines();
+      setText(WAIT_LINES[waitI++ % WAIT_LINES.length]);
+      waitT = setTimeout(tick, 2600);
+    };
+    waitT = setTimeout(tick, 2600);
+  }
+
   function setText(t) {
     if (!textEl || textEl.textContent === t) return;
     textEl.classList.add('swap');
@@ -284,6 +300,7 @@
   }
 
   function close() {
+    stopWaitLines();
     token++;
     clearTimeout(startTimer);
     state = 'idle';
@@ -317,16 +334,19 @@
       return;
     }
     if (!isOnbmc(e.origin) || state !== 'loading') return;
-    if (e.data.sie === 'started') clearTimeout(startTimer);
+    if (e.data.sie === 'started') { clearTimeout(startTimer); startWaitLines(); }
     else if (e.data.sie === 'progress') {
       clearTimeout(startTimer);
       setText(e.data.text || 'Analizando incidencia...');
+      // Al leer páginas, rota frases si tarda; con los adjuntos se deja el contador ("2 de 5").
+      if (e.data.attachments) stopWaitLines(); else startWaitLines();
       if (e.data.total) setRing(e.data.page, e.data.total);
       else if (e.data.attachments) { const c = overlay.querySelector('.sie-count'); if (c.textContent) { const t = +c.textContent.split('/')[1]; setRing(t, t, true); } }
     }
-    else if (e.data.sie === 'done') { clearTimeout(startTimer); showViewer(e.data.id); }
+    else if (e.data.sie === 'done') { clearTimeout(startTimer); stopWaitLines(); showViewer(e.data.id); }
     else if (e.data.sie === 'error') {
       clearTimeout(startTimer);
+      stopWaitLines();
       showStatus(`No se pudo analizar la incidencia${e.data.text ? ': ' + e.data.text : ''}`, true);
       const my = token;
       setTimeout(() => { if (my === token) close(); }, 3500);

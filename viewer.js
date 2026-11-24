@@ -236,7 +236,7 @@
   // files (opcional): Map adjunto -> ruta relativa dentro de la carpeta guardada; si existe, se enlaza cada adjunto.
   function buildText(files) {
     const withSystem = $('opt-system').checked;
-    const withFields = $('opt-fields').checked;
+    const withFields = true; // los datos de la ficha van siempre
     const L = [];
     L.push(`# ${[h.number, h.summary].filter(Boolean).join(' — ')}`);
     if (data.sourceUrl) L.push(`URL: ${data.sourceUrl}`);
@@ -583,14 +583,16 @@
       const ts = toTs(h.created);
       gapBefore(ts);
       const who = [...custNames][0] ? (data.fields || []).find(f => /^(cliente|contacto)$/i.test(f.label)).value : 'Cliente';
-      const m = el('div', 'msg');
-      const meta = el('div', 'msg-meta');
-      meta.innerHTML = '';
-      meta.append(Object.assign(el('strong', '', who)), `, descripción de la incidencia${h.created ? ', ' + dayMonth(h.created) : ''}`);
+      // Si no hay más mensajes, la descripción ocupa todo el ancho (no tiene sentido como chat).
+      const alone = !activity.some(e => !groupEvents.has(e) && (e.isNote || (e.attachments || []).length));
+      const m = el('div', 'msg' + (alone ? ' full' : ''));
+      m.appendChild(el('div', 'msg-meta', 'Descripción de la incidencia'));
       const b = el('div', 'bubble');
       b.style.setProperty('--sh', 'var(--pink)');
+      b.appendChild(el('div', 'bubble-title', who));
       bubbleContent(b, data.description);
-      m.append(meta, b);
+      if (h.created) b.appendChild(el('div', 'bubble-date', dayMonth(h.created)));
+      m.append(b);
       add(m);
     }
     let lastHandoff = '';
@@ -632,15 +634,15 @@
       const cust = isCustomer(e);
       const step = stepAt(ts);
       const m = el('div', 'msg' + (cust ? '' : ' r'));
+      // Encima: tipo de comentario · equipo. Dentro: quién lo escribe, el mensaje y la fecha abajo a la derecha.
       const meta = el('div', 'msg-meta');
-      meta.appendChild(el('strong', '', e.author || 'Sistema'));
-      const role = cust ? 'cliente' : (step ? step.group : (e.type || ''));
-      meta.append(`${role ? ', ' + role : ''}, ${dayMonth(e.date)}`);
-      if (e.type && !cust) meta.title = e.type;
+      const kind = e.type && !/^(agregado|nota)$/i.test(e.type.trim()) ? e.type.trim() : (cust ? 'Comunicación del cliente' : 'Nota');
+      const team = cust ? '' : (step ? step.group : '');
+      meta.appendChild(el('span', '', [kind, team].filter(Boolean).join(' · ')));
       if (e.access && !/p[uú]blic/i.test(e.access)) meta.appendChild(el('span', 'priv', e.access));
       const b = el('div', 'bubble');
       b.style.setProperty('--sh', cust ? 'var(--pink)' : (step ? teamColor(step.group) : 'var(--sky)'));
-      if (e.type && !/agreg|nota/i.test(e.type)) b.appendChild(el('div', 'bubble-title', e.type));
+      b.appendChild(el('div', 'bubble-title', e.author || 'Sistema'));
       const generic = hasFiles && isGenericBody(e.body, e.attachments.map(x => x.name));
       if (e.body && !generic) bubbleContent(b, e.body);
       if (hasFiles) {
@@ -660,6 +662,7 @@
         if (thumbs.childNodes.length) b.appendChild(thumbs);
         if (files.childNodes.length) b.appendChild(files);
       }
+      if (e.date) b.appendChild(el('div', 'bubble-date', dayMonth(e.date)));
       m.append(meta, b);
       add(m);
     });
@@ -732,7 +735,7 @@
   }
 
   function renderFields() {
-    const withFields = $('opt-fields').checked;
+    const withFields = true; // los datos de la ficha van siempre
     const fields = data.fields || [];
     const isRes = f => /^nota de resoluci/i.test(f.label);
     const res = [...new Set(fields.filter(isRes).map(f => f.value.trim()))];
@@ -764,7 +767,6 @@
     $('mode-md').setAttribute('aria-pressed', String(mode === 'md'));
   }
   $('opt-system').onchange = render;
-  $('opt-fields').onchange = render;
   $('mode-view').onclick = () => { mode = 'view'; render(); };
   $('mode-md').onclick = () => { mode = 'md'; render(); };
   renderMetro();
