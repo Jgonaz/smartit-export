@@ -58,7 +58,7 @@
       await chrome.storage.local.remove('pendingSave');
       await chrome.storage.local.set({ lastSave: { ok: true, token: pendingSave.token, at: Date.now(), ...r } });
       msg(`Incidencia guardada en ${r.folderName}/${r.folder}.` + (fromSave ? ' Revisa la ruta para el agente y pulsa «Guardar cambios» para volver.' : ''), 'ok');
-      $('done').focus();
+      if ($('next-time').hidden) $('done').focus();
       return true;
     } catch (err) {
       await chrome.storage.local.set({ lastSave: { ok: false, token: pendingSave.token, at: Date.now(), error: String(err.message || err) } });
@@ -82,9 +82,17 @@
     if (st !== 'granted') st = await handle.requestPermission({ mode: 'readwrite' });
     await SieCarpeta.set(handle);
     await render();
-    if (st === 'granted') { if (!(await finishPending(handle))) msg('Carpeta guardada.', 'ok'); }
+    if (st === 'granted') {
+      if (!(await finishPending(handle))) msg('Carpeta guardada.', 'ok');
+      // Primer permiso: solo dura esta sesión. Se avisa de lo que pasará la próxima vez.
+      $('next-time').hidden = false;
+      $('pick-note').hidden = true; // el aviso ya lo explica
+      $('next-time-ok').focus();
+    }
     else msg('Sin permiso de escritura no se puede guardar en esta carpeta.', 'err');
   });
+
+  $('next-time-ok').addEventListener('click', () => { $('next-time').hidden = true; $('pick-note').hidden = false; $('done').focus(); });
 
   $('grant').addEventListener('click', async () => {
     const handle = await SieCarpeta.get();

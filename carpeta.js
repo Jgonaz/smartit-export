@@ -202,7 +202,7 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
   const STOP = new Set('para porque desde sobre entre cuando donde como pero tiene tienen hace cliente clientes error problema incidencia indica puede pueden esta este estos estas solicitud'.split(' '));
   const words = t => new Set(String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !STOP.has(w)));
-  async function related(handle, cur, limit = 6) {
+  async function related(handle, cur, limit = 10) {
     let jsonl = await readText(handle, 'indice.jsonl');
     if (jsonl == null) { try { await rebuildIndex(handle); jsonl = (await readText(handle, 'indice.jsonl')) || ''; } catch (_) { jsonl = ''; } }
     const tags = uniqTags(cur.tags || []);
@@ -226,6 +226,7 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
     });
     out.sort((a, b) => b.score - a.score || (b.solucion ? 1 : 0) - (a.solucion ? 1 : 0));
     related.total = jsonl.split('\n').filter(Boolean).length;
+    related.more = Math.max(0, out.length - limit);
     return out.slice(0, limit);
   }
 
@@ -236,13 +237,16 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
     const known = new Set(vocab.keys());
     const jsonl = (await readText(root, 'indice.jsonl')) || '';
     jsonl.split('\n').forEach(l => { try { (JSON.parse(l).etiquetas || []).forEach(t => known.add(t)); } catch (_) {} });
-    let current = null;
+    let current = null, savedAt = '';
     try {
       const dir = await root.getDirectoryHandle(safe(folder));
       const c = await readText(dir, 'clasificacion.md');
       if (c != null) current = uniqTags(FM.parse(c).data.etiquetas || []);
+      const inc = await readText(dir, 'incidencia.md');
+      if (inc != null) savedAt = FM.parse(inc).data.guardada || '';
+      if (inc != null && !savedAt) savedAt = '?'; // guardada con una versión anterior, sin fecha
     } catch (_) { /* aún no se ha guardado */ }
-    return { known: [...known].sort(), descriptions: Object.fromEntries(vocab), current };
+    return { known: [...known].sort(), descriptions: Object.fromEntries(vocab), current, savedAt };
   }
 
   // Al volver a guardar: incidencia.md se reescribe y adjuntos/ se rehace para que coincida con la
@@ -299,9 +303,10 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
     const dir = base ? base + sep + folder : `${folderName || 'la carpeta elegida'}${sep}${folder}`;
     const title = [number, summary].filter(Boolean).join(' – ');
     const root = base || folderName || 'la carpeta elegida';
-    return `Analiza la incidencia ${title || folder}. Antes, lee ${root}${sep}AGENTS.md: explica cómo están organizadas ` +
-      `las incidencias guardadas y cómo buscar otras parecidas en ${root}${sep}indice.md. ` +
-      `La incidencia está en ${dir}${sep}incidencia.md y sus adjuntos en ${dir}${sep}adjuntos${sep} (revisa también las imágenes). ` +
+    return `Analiza la incidencia ${title || folder}.\n` +
+      `Antes de empezar, lee ${root}${sep}AGENTS.md (describe cómo están organizadas las incidencias guardadas ` +
+      `y cómo buscar otras parecidas en ${root}${sep}indice.md) y sigue sus pasos.\n` +
+      `La incidencia está en ${dir}${sep}incidencia.md y sus adjuntos en ${dir}${sep}adjuntos${sep} (revisa también las imágenes).\n` +
       `Al terminar, rellena su clasificacion.md con etiquetas, causa y solución.`;
   }
 

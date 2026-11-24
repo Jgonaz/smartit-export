@@ -17,7 +17,6 @@
         <span id="tag-list" class="tag-list"></span>
         <input id="tag-input" class="tag-input" list="tag-options" placeholder="Añadir etiqueta" autocomplete="off" spellcheck="false" aria-label="Añadir etiqueta">
         <datalist id="tag-options"></datalist>
-        <span id="tag-note" class="tag-note muted"></span>
       </div>
     </div>
     <div class="head-side">
@@ -60,6 +59,7 @@
           <span id="save-label">Guardar</span>
         </button>
       </div>
+      <div id="save-status" class="save-status" role="status" aria-live="polite" hidden></div>
     </div>
   </header>
 
@@ -102,6 +102,8 @@
         <h2 class="mono-h">Relacionadas</h2>
         <p class="muted small-p related-sub">Incidencias ya guardadas en tu carpeta que se parecen a esta.</p>
         <ol id="related" class="related"></ol>
+        <button type="button" id="related-more" class="rel-more rel-all" hidden></button>
+        <p id="related-note" class="muted small-p rel-note" hidden></p>
       </section>
       <section id="files-card" class="card files-card" hidden>
         <h2 class="mono-h">Archivos</h2>

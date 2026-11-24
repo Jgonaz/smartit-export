@@ -20,7 +20,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (!h) return { ok: false, reason: 'no-folder' };
       if ((await SieCarpeta.status(h)) !== 'granted') return { ok: false, reason: 'permission' };
       const items = await SieCarpeta.related(h, msg.current || {});
-      return { ok: true, items, total: SieCarpeta.related.total || 0 };
+      return { ok: true, items, total: SieCarpeta.related.total || 0, more: SieCarpeta.related.more || 0 };
     })().then(sendResponse, () => sendResponse({ ok: false }));
     return true;
   }

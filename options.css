@@ -34,3 +34,8 @@ body.opt.popup .opt-foot { position: sticky; }
 html[data-style="classic"] .opt-check input { accent-color: var(--accent); }
 /* En la ventanita de «Guardar» solo interesa la carpeta y la ruta. */
 body.opt.popup #update-card { display: none; }
+.next-time { margin-top: 16px; padding: 14px 16px; border: var(--bw) solid var(--border); border-radius: 10px; background: color-mix(in srgb, var(--butter) 35%, var(--card)); animation: next-in .35s cubic-bezier(.2,.9,.25,1.15); }
+.next-time p { margin: 6px 0 12px; font-size: 14px; line-height: 1.5; }
+.next-time .btn-card { height: 36px; }
+@keyframes next-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+html[data-style="classic"] .next-time { border-color: var(--helix-line); background: var(--helix-bg); }

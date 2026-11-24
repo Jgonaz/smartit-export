@@ -853,13 +853,24 @@
     tagState.known.filter(t => !tagState.tags.includes(t)).forEach(t => { const o = el('option'); o.value = t; opts.appendChild(o); });
     $('md').textContent = buildText();
   }
+  // Debajo de los botones: cuándo se guardó por última vez, o que hay cambios sin guardar.
+  const saveState = { savedAt: '', dirty: false };
+  function renderSaveStatus() {
+    const st = $('save-status');
+    st.classList.toggle('dirty', saveState.dirty);
+    $('save').classList.toggle('has-dot', saveState.dirty);
+    if (saveState.dirty) { st.textContent = 'Etiquetas sin guardar · pulsa Guardar'; st.hidden = false; }
+    else if (saveState.savedAt) { st.textContent = saveState.savedAt === '?' ? 'Guardada en tu carpeta' : `Guardada el ${dayMonth(saveState.savedAt)}`; st.hidden = false; }
+    else st.hidden = true;
+  }
   function setTags(tags, { silent } = {}) {
     tagState.tags = [...new Set(tags.map(SieCarpeta.normTag).filter(Boolean))];
     renderTags();
-    if (typeof refreshRelated === 'function') refreshRelated();
+    refreshRelated({ flash: !silent });
     if (!silent) {
       chrome.storage.local.set({ [tagKey]: tagState.tags });
-      $('tag-note').textContent = 'Se guardan con la incidencia al pulsar «Guardar».';
+      saveState.dirty = true;
+      renderSaveStatus();
     }
   }
   const addFromInput = () => {
@@ -883,6 +894,7 @@
         tagState.known = r.known || [];
         if (r.current) setTags(r.current, { silent: true }); // lo guardado en la carpeta manda
         tagState.loaded = true;
+        if (r.savedAt) { saveState.savedAt = r.savedAt; renderSaveStatus(); }
         renderTags();
       }
     } catch (_) { /* sin carpeta: se suman al guardar */ }
@@ -892,30 +904,41 @@
 
   // ---------- incidencias relacionadas (fase 3) ----------
   // Se calculan con el índice de la carpeta; se recalculan al cambiar las etiquetas y al guardar.
-  var relatedT; // var: refreshRelated() se puede llamar antes de llegar a esta línea
-  function refreshRelated() {
+  // Devuelve una promesa con el número de relacionadas (se usa en el aviso de «Guardar»).
+  // flash: resalta la tarjeta si los resultados han cambiado (al guardar o al tocar etiquetas).
+  var relatedT, relatedWaiters, relatedSig; // var: refreshRelated() se puede llamar antes de llegar a esta línea
+  function refreshRelated({ flash } = {}) {
     clearTimeout(relatedT);
+    const p = new Promise(res => (relatedWaiters = relatedWaiters || []).push(res));
     relatedT = setTimeout(async () => {
+      const waiters = relatedWaiters || []; relatedWaiters = [];
+      const done = n => waiters.forEach(w => w(n));
       let r;
-      try { r = await chrome.runtime.sendMessage({ type: 'related', current: { folder: fileSafe(h.number || 'incidencia'), frontmatter: frontmatter(), tags: tagState.tags } }); } catch (_) { return; }
+      try { r = await chrome.runtime.sendMessage({ type: 'related', current: { folder: fileSafe(h.number || 'incidencia'), frontmatter: frontmatter(), tags: tagState.tags } }); } catch (_) { return done(0); }
       const card = $('related-card'), list = $('related');
       list.textContent = '';
       card.hidden = false;
+      card.classList.remove('expanded');
+      $('related-more').hidden = true;
+      $('related-note').hidden = true;
+      const sig = r && r.ok ? (r.items || []).map(x => x.incidencia).join(',') : '';
+      if (flash && relatedSig != null && sig && sig !== relatedSig) { card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash'); }
+      relatedSig = sig;
       // Sin resultados se explica por qué, para que se sepa dónde aparecerán.
       const empty = text => { const li = el('li', 'rel-empty', text); list.appendChild(li); };
       if (!r || !r.ok) {
         if (r && r.reason === 'permission') empty('Falta el permiso de la carpeta: pulsa «Guardar» para darlo y aquí aparecerán las incidencias parecidas.');
         else empty('Aparecerán aquí cuando guardes incidencias con «Guardar»: se buscan entre las de tu carpeta.');
-        return;
+        return done(0);
       }
       if (!r.items || !r.items.length) {
         empty(r.total > 1
           ? `Ninguna parecida entre las ${r.total} incidencias guardadas. Añade etiquetas para encontrarlas mejor.`
           : 'Todavía no hay otras incidencias guardadas en tu carpeta.');
-        return;
+        return done(0);
       }
-      r.items.forEach(it => {
-        const li = el('li');
+      r.items.forEach((it, idx) => {
+        const li = el('li', idx >= 3 ? 'extra' : '');
         const head = el('div', 'rel-head');
         const num = el('span', 'rel-num');
         if (it.url) { const a = el('a', 'u', it.incidencia); a.href = it.url; a.target = '_blank'; a.rel = 'noopener'; a.title = 'Abrir en SmartIT'; num.appendChild(a); }
@@ -946,8 +969,18 @@
         } else if (it.equipo) li.appendChild(el('div', 'rel-why', `Equipo: ${it.equipo}. Sin solución anotada todavía.`));
         list.appendChild(li);
       });
-      card.hidden = false;
+      // Solo las 3 más parecidas a la vista; el resto, al pulsar «Ver N más» (con scroll propio).
+      const extra = r.items.length - 3;
+      if (extra > 0) {
+        const more = $('related-more');
+        more.hidden = false;
+        more.textContent = `Ver ${extra} más`;
+        more.onclick = () => { const o = card.classList.toggle('expanded'); more.textContent = o ? 'Ver menos' : `Ver ${extra} más`; };
+      }
+      if (r.more > 0) { $('related-note').hidden = false; $('related-note').textContent = `Hay ${r.more} parecidas más: el agente puede buscarlas en indice.md.`; }
+      done(r.items.length);
     }, 250);
+    return p;
   }
 
   // ---------- guardar en la carpeta elegida (markdown + adjuntos) ----------
@@ -969,6 +1002,7 @@
     return { folder, files, meta: { frontmatter: frontmatter(), tags: tagState.tags, tagsLoaded: tagState.loaded } };
   }
 
+  const nowStamp = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; };
   // Datos de la incidencia para el bloque inicial de incidencia.md (y el índice de la carpeta).
   function frontmatter() {
     const f = re => { const x = (data.fields || []).find(y => re.test(y.label)); return x ? x.value.trim() : ''; };
@@ -984,7 +1018,7 @@
       equipos: [...new Set(teamSteps.map(s => s.group))],
       reaperturas: String(teamSteps.filter(s => s.reopened).length || 0),
       abierta: h.created || '', tiempo_total: startTs ? fmtDur(Math.max(0, endTs - startTs)) : '',
-      resolucion: f(/^nota de resoluci/i), url: data.sourceUrl || '', guardada: new Date().toLocaleString('es-ES')
+      resolucion: f(/^nota de resoluci/i), url: data.sourceUrl || '', guardada: nowStamp()
     };
   }
 
@@ -1016,18 +1050,22 @@
   // Tras guardar, las etiquetas del visor ya son las de la carpeta (incluidas las que añadió el agente).
   function afterSave(r) {
     tagState.loaded = true;
-    if (Array.isArray(r.tags)) setTags(r.tags, { silent: true });
+    if (Array.isArray(r.tags)) { tagState.tags = [...new Set(r.tags)]; renderTags(); }
     chrome.storage.local.set({ [tagKey]: tagState.tags });
-    $('tag-note').textContent = '';
+    saveState.dirty = false;
+    saveState.savedAt = nowStamp();
+    renderSaveStatus();
+    return refreshRelated({ flash: true }); // el índice ya está al día: se buscan las relacionadas
   }
   async function copyPrompt(r, savedText) {
-    afterSave(r);
+    const nRel = await Promise.race([afterSave(r), new Promise(res => setTimeout(() => res(0), 1500))]);
+    const relLine = nRel ? `\n${nRel === 1 ? '1 incidencia relacionada' : nRel + ' incidencias relacionadas'} en el lateral.` : '';
     const text = await promptFor(r);
     try {
       await navigator.clipboard.writeText(text);
-      toast(`${savedText}\nPrompt listo para pegar en el agente (${PASTE}).`, { ms: 4500 });
+      toast(`${savedText}\nPrompt listo para pegar en el agente (${PASTE}).${relLine}`, { ms: relLine ? 6000 : 4500 });
     } catch (_) {
-      toast(savedText, { action: 'Copiar prompt', onAction: async () => {
+      toast(savedText + relLine, { action: 'Copiar prompt', onAction: async () => {
         await navigator.clipboard.writeText(text);
         toast(`Prompt listo para pegar en el agente (${PASTE}).`);
       } });
