@@ -831,11 +831,15 @@
   // Se guardan con la incidencia (clasificacion.md) al pulsar «Guardar». Mientras, se recuerdan aquí.
   // loaded: ya se leyeron las guardadas en la carpeta, así que la lista del visor manda al guardar.
   const tagKey = 'tags_' + (h.number || key);
+  // Color pastel fijo por etiqueta (el mismo en todas las incidencias): se elige con un hash del nombre.
+  const TAG_COLORS = ['#F7C6D9', '#FBD3C0', '#FDE7A9', '#D6EDB5', '#BFE6D6', '#BFE0F2', '#CFD5FA', '#DCCDF6', '#F3CDEB', '#E6DCCB'];
+  const tagColor = t => { let x = 0; for (const c of t) x = (x * 31 + c.codePointAt(0)) >>> 0; return TAG_COLORS[x % TAG_COLORS.length]; };
   function renderTags() {
     const list = $('tag-list');
     list.textContent = '';
     tagState.tags.forEach(t => {
       const chip = el('span', 'tag', t);
+      chip.style.setProperty('--tc', tagColor(t));
       const x = el('button', '', '×');
       x.type = 'button';
       x.title = `Quitar «${t}»`;
