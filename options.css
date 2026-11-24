@@ -21,3 +21,8 @@ body.opt.popup .opt-wrap { padding: 26px 24px 30px; }
 body.opt.popup .opt-wrap h1 { font-size: 24px; }
 body.opt.popup .opt-card { margin-top: 22px; }
 .opt-card .small-p strong { color: var(--ink); }
+.opt-actions .text-link { padding: 0 4px; }
+.opt-wrap { padding-bottom: 110px; }
+.opt-foot { position: fixed; left: 0; right: 0; bottom: 0; background: var(--bg); border-top: 1px solid var(--hair); z-index: 5; }
+.opt-foot-in { max-width: 720px; margin: 0 auto; padding: 14px 32px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.opt-foot .small-p { margin: 0; }

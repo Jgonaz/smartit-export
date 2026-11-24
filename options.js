@@ -2,11 +2,15 @@
   'use strict';
   const $ = id => document.getElementById(id);
   // ?save=1: abierta desde «Guardar» sin carpeta (o sin permiso); al elegirla se termina de guardar.
-  const fromSave = new URLSearchParams(location.search).has('save');
-  if (fromSave) {
-    document.body.classList.add('popup');
+  const saveMode = new URLSearchParams(location.search).get('save'); // 'no-folder' | 'permission' | null
+  const fromSave = !!saveMode;
+  if (fromSave) document.body.classList.add('popup');
+  if (saveMode === 'permission') {
+    $('opt-title').textContent = 'Confirma el permiso';
+    $('opt-lede').innerHTML = 'Chrome solo da el primer permiso mientras está abierta esta ventana. Pulsa <strong>Dar permiso y guardar</strong> y elige <strong>«Permitir en cada visita»</strong>: no volverá a preguntar.';
+  } else if (fromSave) {
     $('opt-title').textContent = 'Elige dónde guardar';
-    $('opt-lede').textContent = 'Solo hace falta la primera vez: a partir de ahora, «Guardar» escribirá directamente en esta carpeta.';
+    $('opt-lede').textContent = 'Elige la carpeta donde se guardarán las incidencias. Después, «Guardar» escribirá ahí directamente.';
   }
 
   const msg = (text, kind) => { const m = $('msg'); m.hidden = !text; m.textContent = text || ''; m.className = 'opt-msg' + (kind ? ' ' + kind : ''); };
@@ -21,9 +25,17 @@
       prompt: 'Chrome necesita que vuelvas a dar permiso para escribir en ella.',
       denied: 'Chrome ha bloqueado el permiso para escribir en ella. Elige otra carpeta o revisa los permisos del sitio.'
     }[st] || '';
-    $('pick').textContent = handle ? 'Cambiar carpeta' : 'Elegir carpeta';
-    $('grant').hidden = st !== 'prompt';
+    // El botón principal es lo que toca hacer ahora; el resto, como enlaces.
+    const needGrant = st === 'prompt';
+    $('grant').hidden = !needGrant;
+    $('grant').textContent = fromSave ? 'Dar permiso y guardar' : 'Dar permiso';
+    const pickLabel = handle ? 'Cambiar carpeta' : 'Elegir carpeta';
+    if (needGrant) { $('pick').className = 'text-link'; $('pick').innerHTML = `<span class="u">${pickLabel}</span>`; }
+    else { $('pick').className = 'btn-card'; $('pick').textContent = pickLabel; }
     $('forget').hidden = !handle;
+    $('pick-note').innerHTML = needGrant
+      ? 'En el aviso de Chrome elige <strong>«Permitir en cada visita»</strong>. Si eliges «Permitir esta vez», habrá que repetirlo en la próxima sesión.'
+      : 'Chrome te preguntará si la extensión puede modificar archivos en esa carpeta. Puede que la siguiente vez te pida confirmarlo una vez más: elige <strong>«Permitir en cada visita»</strong> y no volverá a preguntar.';
     await renderPrompt(handle);
     return { handle, st };
   }
@@ -45,9 +57,8 @@
       const r = await SieCarpeta.write(handle, pendingSave.folder, pendingSave.files);
       await chrome.storage.local.remove('pendingSave');
       await chrome.storage.local.set({ lastSave: { ok: true, token: pendingSave.token, at: Date.now(), ...r } });
-      msg(`Guardada en ${r.folderName}/${r.folder}.`, 'ok');
-      if (fromSave && $('agent-path').value.trim()) setTimeout(() => window.close(), 1400);
-      else if (fromSave) msg(`Guardada en ${r.folderName}/${r.folder}. Si quieres, escribe abajo la ruta para el agente y cierra esta ventana.`, 'ok');
+      msg(`Incidencia guardada en ${r.folderName}/${r.folder}.` + (fromSave ? ' Revisa la ruta para el agente y pulsa «Guardar cambios» para volver.' : ''), 'ok');
+      $('done').focus();
       return true;
     } catch (err) {
       await chrome.storage.local.set({ lastSave: { ok: false, token: pendingSave.token, at: Date.now(), error: String(err.message || err) } });
@@ -105,6 +116,19 @@
     if (style === 'classic') document.documentElement.dataset.style = 'classic'; else delete document.documentElement.dataset.style;
   };
   applyLook(await chrome.storage.local.get(['theme', 'style']));
+
+  // «Guardar cambios»: guarda la ruta para el agente y cierra la ventana.
+  if (fromSave) $('foot-note').textContent = 'Al terminar, pulsa «Guardar cambios» para cerrar esta ventana.';
+  $('done').addEventListener('click', async () => {
+    clearTimeout(t);
+    await chrome.storage.local.set({ agentPath: $('agent-path').value.trim() });
+    $('done').textContent = 'Guardado';
+    setTimeout(() => {
+      window.close(); // en una pestaña abierta desde chrome://extensions puede no cerrarse: se deja el aviso
+      $('done').textContent = 'Guardar cambios';
+      $('foot-note').textContent = 'Cambios guardados.';
+    }, 350);
+  });
 
   const { st } = await render();
   if (fromSave && st === 'prompt') $('grant').focus(); else if (fromSave) $('pick').focus();

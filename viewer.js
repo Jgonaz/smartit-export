@@ -842,13 +842,19 @@
   function toast(text, { action, onAction, error, ms = 2200 } = {}) {
     $('toast-text').textContent = text;
     $('toast').classList.toggle('err', !!error);
+    $('toast-ico-path').setAttribute('d', error ? 'M12 7v6M12 17v.5' : 'M5 12.5l4.5 4.5L19 7.5');
     const btn = $('toast-action');
     btn.hidden = !action;
     btn.textContent = action || '';
     btn.onclick = onAction ? async () => { await onAction(); } : null;
-    $('toast').hidden = false;
+    const t = $('toast');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { $('toast').hidden = true; }, action ? Math.max(ms, 9000) : ms);
+    // Se vuelve a lanzar la animación de entrada en cada aviso.
+    t.classList.remove('out'); t.hidden = true; void t.offsetWidth; t.hidden = false;
+    toastTimer = setTimeout(() => {
+      t.classList.add('out');
+      toastTimer = setTimeout(() => { t.hidden = true; t.classList.remove('out'); }, 220);
+    }, action ? Math.max(ms, 9000) : ms);
   }
 
   async function promptFor(r) {
@@ -860,7 +866,7 @@
     const text = await promptFor(r);
     try {
       await navigator.clipboard.writeText(text);
-      toast(`${savedText} Prompt para el agente copiado.`);
+      toast(`${savedText} Prompt para el agente copiado.`, { ms: 4000 });
     } catch (_) {
       toast(savedText, { action: 'Copiar prompt', onAction: async () => {
         await navigator.clipboard.writeText(text);
@@ -891,7 +897,7 @@
         // Primera vez (o permiso caducado): se elige la carpeta en una ventanita y allí se termina de guardar.
         pendingToken = crypto.randomUUID();
         await chrome.storage.local.set({ pendingSave: { token: pendingToken, folder, files } });
-        await chrome.runtime.sendMessage({ type: 'open-options', save: true });
+        await chrome.runtime.sendMessage({ type: 'open-options', save: true, reason: r.reason });
         saveLabel(r.reason === 'no-folder' ? 'Elige la carpeta…' : 'Da permiso…');
         return;
       }

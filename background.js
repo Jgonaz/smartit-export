@@ -88,7 +88,20 @@ async function ensureOffscreen() {
   });
 }
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+// Ventana de elegir carpeta: todo el alto de la ventana desde la que se pulsó «Guardar», centrada.
+async function openFolderWindow(url, sender) {
+  const W = 780;
+  let geo = {};
+  try {
+    const win = sender && sender.tab ? await chrome.windows.get(sender.tab.windowId) : await chrome.windows.getLastFocused();
+    if (win && win.state !== 'minimized' && win.height) {
+      geo = { top: win.top, height: win.height, left: Math.max(win.left, Math.round(win.left + (win.width - W) / 2)) };
+    }
+  } catch (_) { /* sin datos de la ventana: tamaño por defecto */ }
+  return chrome.windows.create({ url, type: 'popup', width: W, height: geo.height || 900, top: geo.top, left: geo.left, focused: true });
+}
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg) return;
   if (msg.type === 'save-files') {
     (async () => {
@@ -104,11 +117,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg.type === 'open-options') {
     // Ventana pequeña para elegir la carpeta (el selector de Chrome no se abre desde el visor incrustado).
-    const url = chrome.runtime.getURL('options.html') + (msg.save ? '?save=1' : '');
-    (msg.save
-      ? chrome.windows.create({ url, type: 'popup', width: 760, height: 720, focused: true })
-      : chrome.runtime.openOptionsPage()
-    ).then(() => sendResponse({ ok: true }), err => sendResponse({ ok: false, error: String(err) }));
+    const url = chrome.runtime.getURL('options.html') + (msg.save ? '?save=' + (msg.reason || 'no-folder') : '');
+    (msg.save ? openFolderWindow(url, sender) : chrome.runtime.openOptionsPage()).then(() => sendResponse({ ok: true }), err => sendResponse({ ok: false, error: String(err) }));
     return true;
   }
 });
