@@ -19,7 +19,9 @@ stub = '''<script src="../fixtures/{name}.js"></script>
 </script>
 '''
 html = (root / 'viewer.html').read_text(encoding='utf-8')
-html = html.replace('href="viewer.css"', 'href="../../viewer.css"').replace('src="theme.js"', 'src="../../theme.js"')
+html = html.replace('href="viewer.css"', 'href="../../viewer.css"')
+for js in ('theme.js', 'carpeta.js'):
+    html = html.replace(f'src="{js}"', f'src="../../{js}"')
 for f in sorted((root / 'tests' / 'fixtures').glob('*.js')):
     page = html.replace('<script src="viewer.js"></script>', stub.format(name=f.stem) + '<script src="../../viewer.js"></script>')
     (out / f'{f.stem}.html').write_text(page, encoding='utf-8')

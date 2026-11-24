@@ -233,7 +233,7 @@
 
   // ---------- texto ----------
   const indent = (s, pad = '  ') => s.split('\n').join('\n' + pad);
-  // files (opcional): Map adjunto -> ruta relativa dentro del .zip; si existe, se enlaza cada adjunto.
+  // files (opcional): Map adjunto -> ruta relativa dentro de la carpeta guardada; si existe, se enlaza cada adjunto.
   function buildText(files) {
     const withSystem = $('opt-system').checked;
     const withFields = $('opt-fields').checked;
@@ -809,97 +809,128 @@
     check();
   })();
 
-  let toastTimer;
   $('copy').onclick = async () => {
     await navigator.clipboard.writeText(buildText());
     const b = $('copy');
     b.classList.add('ok');
     $('copy-label').textContent = '¡Copiado!';
+    toast('Markdown copiado al portapapeles');
+    setTimeout(() => { b.classList.remove('ok'); $('copy-label').textContent = 'Copiar para el agente'; }, 1800);
+  };
+
+
+  // ---------- guardar en la carpeta elegida (markdown + adjuntos) ----------
+  const fileSafe = n => n.normalize('NFC').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'archivo';
+  function filesToSave() {
+    const folder = fileSafe(h.number || 'incidencia');
+    const paths = new Map();
+    const used = new Set();
+    const files = [];
+    attachments.forEach((a, i) => {
+      if (!a.dataUrl) return;
+      let name = fileSafe(a.name);
+      if (used.has(name.toLowerCase())) name = `${i + 1}_${name}`;
+      used.add(name.toLowerCase());
+      paths.set(a, `adjuntos/${name}`);
+      files.push({ path: `adjuntos/${name}`, dataUrl: a.dataUrl });
+    });
+    files.unshift({ path: 'incidencia.md', text: buildText(paths) });
+    return { folder, files };
+  }
+
+  let toastTimer;
+  function toast(text, { action, onAction, error, ms = 2200 } = {}) {
+    $('toast-text').textContent = text;
+    $('toast').classList.toggle('err', !!error);
+    const btn = $('toast-action');
+    btn.hidden = !action;
+    btn.textContent = action || '';
+    btn.onclick = onAction ? async () => { await onAction(); } : null;
     $('toast').hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-      b.classList.remove('ok');
-      $('copy-label').textContent = 'Copiar para el agente';
-      $('toast').hidden = true;
-    }, 1800);
-  };
-
-  // ---------- descargar .zip (markdown + adjuntos) ----------
-  // ZIP sin compresión ("store"), suficiente para imágenes ya comprimidas y sin dependencias externas.
-  const CRC_TABLE = (() => {
-    const t = new Uint32Array(256);
-    for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
-    return t;
-  })();
-  const crc32 = bytes => { let c = 0xFFFFFFFF; for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
-  function makeZip(entries) {
-    const enc = new TextEncoder();
-    const now = new Date();
-    const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
-    const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
-    const parts = [], central = [];
-    let offset = 0;
-    for (const { name, data } of entries) {
-      const nameBytes = enc.encode(name);
-      const crc = crc32(data);
-      const local = new DataView(new ArrayBuffer(30));
-      local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true); local.setUint16(6, 0x0800, true); // UTF-8
-      local.setUint16(8, 0, true); local.setUint16(10, dosTime, true); local.setUint16(12, dosDate, true);
-      local.setUint32(14, crc, true); local.setUint32(18, data.length, true); local.setUint32(22, data.length, true);
-      local.setUint16(26, nameBytes.length, true); local.setUint16(28, 0, true);
-      parts.push(new Uint8Array(local.buffer), nameBytes, data);
-      const cd = new DataView(new ArrayBuffer(46));
-      cd.setUint32(0, 0x02014b50, true); cd.setUint16(4, 20, true); cd.setUint16(6, 20, true); cd.setUint16(8, 0x0800, true);
-      cd.setUint16(10, 0, true); cd.setUint16(12, dosTime, true); cd.setUint16(14, dosDate, true);
-      cd.setUint32(16, crc, true); cd.setUint32(20, data.length, true); cd.setUint32(24, data.length, true);
-      cd.setUint16(28, nameBytes.length, true); cd.setUint32(42, offset, true);
-      central.push(new Uint8Array(cd.buffer), nameBytes);
-      offset += 30 + nameBytes.length + data.length;
-    }
-    const cdSize = central.reduce((n, b) => n + b.length, 0);
-    const end = new DataView(new ArrayBuffer(22));
-    end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
-    end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
-    return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+    toastTimer = setTimeout(() => { $('toast').hidden = true; }, action ? Math.max(ms, 9000) : ms);
   }
-  const dataUrlBytes = du => { const bin = atob(du.split(',')[1]); const b = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); return b; };
-  const fileSafe = n => n.normalize('NFC').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'archivo';
 
-  $('zip').onclick = async () => {
-    const btn = $('zip');
-    const label = $('zip-label');
-    btn.disabled = true;
-    label.textContent = 'Generando…';
+  async function promptFor(r) {
+    const { agentPath = '' } = await chrome.storage.local.get('agentPath');
+    return SieCarpeta.prompt({ agentPath, folderName: r.folderName, folder: r.folder, number: h.number, summary: h.summary });
+  }
+  // Copia el prompt; si el navegador no lo permite (la ventana no tiene el foco), ofrece un botón.
+  async function copyPrompt(r, savedText) {
+    const text = await promptFor(r);
     try {
-      const id = fileSafe(h.number || 'incidencia');
-      const files = new Map();
-      const used = new Set();
-      const entries = [];
-      attachments.forEach((a, i) => {
-        if (!a.dataUrl) return;
-        let name = fileSafe(a.name);
-        if (used.has(name.toLowerCase())) name = `${i + 1}_${name}`;
-        used.add(name.toLowerCase());
-        files.set(a, `adjuntos/${name}`);
-        entries.push({ name: `${id}/adjuntos/${name}`, data: dataUrlBytes(a.dataUrl) });
-      });
-      entries.unshift({ name: `${id}/incidencia.md`, data: new TextEncoder().encode(buildText(files)) });
-      const url = URL.createObjectURL(makeZip(entries));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${id}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
-      label.textContent = '¡Descargado!';
+      await navigator.clipboard.writeText(text);
+      toast(`${savedText} Prompt para el agente copiado.`);
+    } catch (_) {
+      toast(savedText, { action: 'Copiar prompt', onAction: async () => {
+        await navigator.clipboard.writeText(text);
+        toast('Prompt para el agente copiado.');
+      } });
+    }
+  }
+
+  let pendingToken = null;
+  const saveLabel = (t, reset) => {
+    $('save-label').textContent = t;
+    if (reset) setTimeout(() => { $('save-label').textContent = 'Guardar'; $('save').disabled = false; }, 1800);
+  };
+  $('save').onclick = async () => {
+    const btn = $('save');
+    btn.disabled = true;
+    saveLabel('Guardando…');
+    try {
+      const { folder, files } = filesToSave();
+      const r = await chrome.runtime.sendMessage({ type: 'save-files', folder, files });
+      if (r && r.ok) {
+        saveLabel('Guardado', true);
+        await copyPrompt(r, `Guardado en ${r.folderName}/${r.folder}.`);
+        refreshFolder();
+        return;
+      }
+      if (r && (r.reason === 'no-folder' || r.reason === 'permission')) {
+        // Primera vez (o permiso caducado): se elige la carpeta en una ventanita y allí se termina de guardar.
+        pendingToken = crypto.randomUUID();
+        await chrome.storage.local.set({ pendingSave: { token: pendingToken, folder, files } });
+        await chrome.runtime.sendMessage({ type: 'open-options', save: true });
+        saveLabel(r.reason === 'no-folder' ? 'Elige la carpeta…' : 'Da permiso…');
+        return;
+      }
+      throw new Error((r && r.error) || 'sin respuesta');
     } catch (err) {
       console.error('[SmartIT export]', err);
-      label.textContent = 'Error al generar';
-    } finally {
-      setTimeout(() => { label.textContent = 'Descargar .zip'; btn.disabled = false; }, 1800);
+      saveLabel('Error al guardar', true);
+      toast('No se pudo guardar: ' + (err.message || err), { error: true, ms: 5000 });
     }
   };
+  // Resultado del guardado terminado en la ventana de ajustes.
+  try {
+    chrome.storage.onChanged.addListener(async (changes, area) => {
+      if (area !== 'local' || !changes.lastSave || !pendingToken) return;
+      const r = changes.lastSave.newValue;
+      if (!r || r.token !== pendingToken) return;
+      pendingToken = null;
+      if (r.ok) { saveLabel('Guardado', true); await copyPrompt(r, `Guardado en ${r.folderName}/${r.folder}.`); }
+      else { saveLabel('Error al guardar', true); toast('No se pudo guardar: ' + r.error, { error: true, ms: 5000 }); }
+      refreshFolder();
+    });
+  } catch (_) {}
+  // Si se cierra la ventana sin elegir carpeta, el botón vuelve a su estado al recuperar el foco.
+  window.addEventListener('focus', () => {
+    if (pendingToken && $('save').disabled) setTimeout(async () => {
+      const { pendingSave } = await chrome.storage.local.get('pendingSave');
+      if (pendingToken && pendingSave && pendingSave.token === pendingToken) saveLabel('Guardar', true);
+    }, 600);
+  });
+
+  async function refreshFolder() {
+    // Se pregunta al documento oculto: el visor incrustado en SmartIT puede no ver la misma base de datos.
+    try {
+      const r = await chrome.runtime.sendMessage({ type: 'folder-status' });
+      $('settings-folder').textContent = !r || !r.name ? 'Sin elegir' : r.name + (r.status === 'granted' ? '' : ' (sin permiso)');
+    } catch (_) { $('settings-folder').textContent = 'Sin elegir'; }
+  }
+  refreshFolder();
+  $('settings-folder-btn').addEventListener('click', () => chrome.runtime.sendMessage({ type: 'open-options' }));
 
   // ---------- aviso de versión nueva ----------
   chrome.runtime.sendMessage({ type: 'update-info' }).then(info => {

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>SmartIT export – Ajustes</title>
+  <link rel="stylesheet" href="viewer.css">
+  <link rel="stylesheet" href="options.css">
+  <script src="theme.js"></script>
+</head>
+<body class="opt">
+  <main class="opt-wrap">
+    <div class="inc-num">SmartIT – Exportar incidencia</div>
+    <h1 id="opt-title">Ajustes</h1>
+    <p id="opt-lede" class="lede">Dónde se guardan las incidencias al pulsar «Guardar» en el visor.</p>
+
+    <section class="card opt-card" style="--sh: var(--mint)">
+      <h2 class="mono-h">Carpeta para guardar</h2>
+      <p class="muted small-p">Cada incidencia se guarda en una subcarpeta con su número, con <code>incidencia.md</code> y los adjuntos en <code>adjuntos/</code>. Si vuelves a guardar la misma incidencia, se actualiza.</p>
+      <div class="folder-row">
+        <svg class="ico folder-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        <div class="folder-info">
+          <div id="folder-name" class="folder-name">Ninguna carpeta elegida</div>
+          <div id="folder-status" class="muted small-p"></div>
+        </div>
+      </div>
+      <div class="opt-actions">
+        <button type="button" id="pick" class="btn-card">Elegir carpeta</button>
+        <button type="button" id="grant" class="text-link" hidden><span class="u">Dar permiso</span></button>
+        <button type="button" id="forget" class="text-link" hidden><span class="u">Dejar de usarla</span></button>
+      </div>
+      <p id="pick-note" class="muted small-p">Chrome te preguntará si la extensión puede modificar archivos en esa carpeta. Elige <strong>«Permitir en cada visita»</strong> para no tener que volver a darlo.</p>
+      <p id="msg" class="opt-msg" role="status" hidden></p>
+    </section>
+
+    <section id="agent-card" class="card opt-card" style="--sh: var(--sky)">
+      <h2 class="mono-h">Ruta para el agente</h2>
+      <p class="muted small-p">Chrome no le dice a la extensión la ruta completa de la carpeta. Escribe aquí cómo la ve tu agente (por ejemplo, desde WSL <code>/mnt/c/Users/tu-usuario/incidencias</code>) para que el prompt copiado la incluya.</p>
+      <input id="agent-path" class="opt-input" type="text" spellcheck="false" placeholder="/mnt/c/Users/tu-usuario/incidencias" autocomplete="off">
+      <div class="muted small-p">Prompt que se copia al guardar:</div>
+      <pre id="prompt-preview" class="opt-pre"></pre>
+    </section>
+  </main>
+  <script src="carpeta.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

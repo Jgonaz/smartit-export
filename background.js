@@ -74,3 +74,41 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 });
+
+// ---------- guardar en la carpeta elegida ----------
+// La escritura la hace un documento oculto de la extensión (offscreen.html), porque el visor
+// incrustado en SmartIT es un marco dentro de otra web y ahí Chrome no deja usar la carpeta.
+async function ensureOffscreen() {
+  const ctx = await chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] });
+  if (ctx.length) return;
+  await chrome.offscreen.createDocument({
+    url: 'offscreen.html',
+    reasons: ['BLOBS'],
+    justification: 'Escribir la incidencia y sus adjuntos en la carpeta elegida por el usuario.'
+  });
+}
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (!msg) return;
+  if (msg.type === 'save-files') {
+    (async () => {
+      await ensureOffscreen();
+      return chrome.runtime.sendMessage({ target: 'offscreen', type: 'write', folder: msg.folder, files: msg.files });
+    })().then(sendResponse, err => sendResponse({ ok: false, reason: 'error', error: String(err && err.message || err) }));
+    return true;
+  }
+  if (msg.type === 'folder-status') {
+    ensureOffscreen().then(() => chrome.runtime.sendMessage({ target: 'offscreen', type: 'status' }))
+      .then(sendResponse, () => sendResponse({ name: '', status: 'none' }));
+    return true;
+  }
+  if (msg.type === 'open-options') {
+    // Ventana pequeña para elegir la carpeta (el selector de Chrome no se abre desde el visor incrustado).
+    const url = chrome.runtime.getURL('options.html') + (msg.save ? '?save=1' : '');
+    (msg.save
+      ? chrome.windows.create({ url, type: 'popup', width: 760, height: 720, focused: true })
+      : chrome.runtime.openOptionsPage()
+    ).then(() => sendResponse({ ok: true }), err => sendResponse({ ok: false, error: String(err) }));
+    return true;
+  }
+});

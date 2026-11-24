@@ -1,0 +1,23 @@
+/* Página de ajustes de la extensión (reutiliza las variables y piezas de viewer.css). */
+.opt-wrap { max-width: 720px; margin: 0 auto; padding: 40px 32px 60px; }
+.opt-wrap h1 { margin-top: 4px; }
+.opt-card { padding: 22px 24px; margin-top: 30px; }
+.opt-card .mono-h { margin-bottom: 8px; }
+.opt-card .small-p { margin: 6px 0 0; }
+.opt-card code { font: 13px ui-monospace, "Cascadia Mono", Consolas, monospace; background: var(--hair); border-radius: 4px; padding: 0 4px; }
+.folder-row { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding: 12px 14px; border: 1px dashed var(--grey); border-radius: 10px; }
+.folder-ico { width: 26px; height: 26px; color: var(--grey); }
+.folder-name { font-weight: 700; font-size: 16px; overflow-wrap: anywhere; }
+.folder-info .small-p { margin: 0; }
+.opt-actions { display: flex; align-items: center; gap: 18px; margin-top: 18px; flex-wrap: wrap; }
+.opt-msg { margin: 14px 0 0; font-weight: 600; }
+.opt-msg.ok { color: var(--ok, #146C3A); }
+.opt-msg.err { color: var(--wait); }
+.opt-input { width: 100%; margin: 14px 0 12px; height: 40px; padding: 0 12px; border: var(--bw) solid var(--border); border-radius: 8px; background: var(--card); color: var(--ink); font: 14px ui-monospace, "Cascadia Mono", Consolas, monospace; }
+.opt-input:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
+.opt-pre { margin: 6px 0 0; padding: 12px 14px; background: var(--hair); border-radius: 8px; font: 13px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Modo ventana: se abre al pulsar «Guardar» sin carpeta elegida; solo lo necesario. */
+body.opt.popup .opt-wrap { padding: 26px 24px 30px; }
+body.opt.popup .opt-wrap h1 { font-size: 24px; }
+body.opt.popup .opt-card { margin-top: 22px; }
+.opt-card .small-p strong { color: var(--ink); }

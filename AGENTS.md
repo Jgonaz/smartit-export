@@ -22,6 +22,8 @@ Guía para agentes (y personas) que retomen este repositorio. Recoge lo que se a
 | `content.js` | Iframe de la ficha, todos los marcos | Lee campos, resumen de HelixGPT y actividad (todas las páginas) y descarga los adjuntos. |
 | `background.js` | Service worker | Guarda cada exportación en `chrome.storage.local` con una clave aleatoria (`exp_<fecha>_<uuid>`), conserva las 10 más recientes y comprueba si hay versión nueva. |
 | `viewer.html/.js/.css`, `theme.js` | Página de la extensión | El visor. `theme.js` aplica tema y estilo antes de pintar para evitar parpadeos. |
+| `options.html/.js/.css` | Página de opciones de la extensión | Elegir la carpeta donde guardar, volver a dar permiso y la ruta para el agente. |
+| `carpeta.js`, `offscreen.html/.js` | Opciones y documento oculto | Guardan la referencia a la carpeta en IndexedDB y escriben los archivos. |
 
 ### Mensajes entre marcos (`postMessage`, campo `sie`)
 
@@ -76,7 +78,15 @@ Si la respuesta es HTML o JSON cuando no debería, se trata como error y el viso
   - Los cambios de grupo son píldoras, los estados son líneas grises y los huecos de más de 2 h se muestran como "X sin actividad".
 - **Tiempo:** el total va desde la creación hasta ahora, o hasta el último cierre si está cerrada. "Sin actividad" es la suma de huecos de más de 2 h entre entradas; las asignaciones automáticas también cuentan como actividad.
 - **Menciones a adjuntos:** el texto que nombra un adjunto se convierte en una etiqueta que abre la imagen. El nombre completo siempre vale. El nombre sin extensión solo vale si parece un nombre de archivo (`image002`, `IMG_1234`, `captura-login`…), nunca si es una palabra suelta ("correo") o un número (que puede ser un dato del cliente).
-- **Markdown para el agente:** `buildText()` genera el Markdown de "Copiar para el agente" y del .zip (`incidencia.md` + `adjuntos/`, zip sin compresión escrito a mano con CRC32).
+- **Markdown para el agente:** `buildText()` genera el Markdown de "Copiar para el agente" y el `incidencia.md` que se guarda.
+
+### Guardar en una carpeta
+
+- Se usa la API de acceso a archivos (`showDirectoryPicker`), no la de descargas: con "Preguntar dónde guardar" activado en Chrome, la API de descargas sigue mostrando el cuadro y solo escribe dentro de Descargas.
+- La carpeta se elige en `options.html`, porque Chrome no deja abrir el selector desde un marco de otro origen (el visor incrustado en SmartIT). La referencia (`FileSystemDirectoryHandle`) se guarda en IndexedDB (`sie-carpeta`).
+- La escritura la hace `offscreen.html` (documento oculto creado por `background.js`), que es de la extensión y no está dentro de SmartIT. Si no hay carpeta o falta permiso, responde `no-folder` / `permission`. Entonces el visor deja los archivos en `chrome.storage.local.pendingSave` y abre `options.html?save=1` en una ventanita. Allí, al elegir la carpeta o dar permiso, se termina de guardar y se avisa al visor con `lastSave`.
+- Permiso: Chrome ofrece "Permitir en cada visita" (permiso persistente). Con "Permitir esta vez" habrá que volver a darlo en otra sesión.
+- La API nunca da la ruta completa de la carpeta, solo su nombre. Por eso la ruta que verá el agente se escribe a mano en opciones (`agentPath`) y se usa en el prompt (`SieCarpeta.prompt`).
 
 ## Probar sin SmartIT
 
