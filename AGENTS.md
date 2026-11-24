@@ -88,6 +88,11 @@ Si la respuesta es HTML o JSON cuando no debería, se trata como error y el viso
 - La carpeta se elige en `options.html`, porque Chrome no deja abrir el selector desde un marco de otro origen (el visor incrustado en SmartIT). La referencia (`FileSystemDirectoryHandle`) se guarda en IndexedDB (`sie-carpeta`).
 - La escritura la hace `offscreen.html` (documento oculto creado por `background.js`), que es de la extensión y no está dentro de SmartIT. Si no hay carpeta o falta permiso, responde `no-folder` / `permission`. Entonces el visor deja los archivos en `chrome.storage.local.pendingSave` y abre `options.html?save=1` en una ventanita. Allí, al elegir la carpeta o dar permiso, se termina de guardar y se avisa al visor con `lastSave`.
 - Permiso: Chrome ofrece "Permitir en cada visita" (permiso persistente). Con "Permitir esta vez" habrá que volver a darlo en otra sesión.
+- **Etiquetas e índice** (`carpeta.js`):
+  - `incidencia.md` empieza con un bloque YAML (frontmatter) con los datos de la ficha (servicio, categorías, equipos, estado, etiquetas…). Lo genera `frontmatter()` en `viewer.js`.
+  - `clasificacion.md` guarda etiquetas, causa, solución y notas libres. Lo mantienen la persona y el agente: al volver a guardar solo se actualizan las etiquetas. Si el visor pudo leer las guardadas (`tagsLoaded`), su lista manda; si no, se suman para no perder ninguna.
+  - En la raíz: `indice.md` e `indice.jsonl` se rehacen leyendo todas las incidencias (así siguen completos aunque varias personas guarden en una carpeta compartida). `etiquetas.md` es el vocabulario: las etiquetas nuevas se añaden en «Sin describir» sin tocar lo escrito. `AGENTS.md` lleva instrucciones para el agente; se reescribe solo si conserva la marca de «generado», para respetar los cambios a mano.
+  - El visor pide `tags-info` para sugerir etiquetas y cargar las de la incidencia. El prompt copiado manda leer primero el `AGENTS.md` de la carpeta.
 - La API nunca da la ruta completa de la carpeta, solo su nombre. Por eso la ruta que verá el agente se escribe a mano en opciones (`agentPath`) y se usa en el prompt (`SieCarpeta.prompt`).
 
 ## Probar sin SmartIT

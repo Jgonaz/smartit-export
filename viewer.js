@@ -14,6 +14,8 @@
   }
 
   const h = data.header || {};
+  // Etiquetas de la incidencia (ver «etiquetas» más abajo).
+  const tagState = { tags: [], loaded: false, known: [] };
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -242,6 +244,7 @@
     if (data.sourceUrl) L.push(`URL: ${data.sourceUrl}`);
     [['Estado', h.status], ['Prioridad', h.priority], ['Fecha de creación', h.created],
       ['Última modificación', h.modified]].forEach(([k, v]) => v && L.push(`${k}: ${v}`));
+    if (tagState.tags.length) L.push(`Etiquetas: ${tagState.tags.join(', ')}`);
     L.push('');
     if (data.summary && data.summary.markdown) {
       const meta = [data.summary.by && `por ${data.summary.by}`, data.summary.date].filter(Boolean).join(', ');
@@ -824,6 +827,63 @@
   };
 
 
+  // ---------- etiquetas ----------
+  // Se guardan con la incidencia (clasificacion.md) al pulsar «Guardar». Mientras, se recuerdan aquí.
+  // loaded: ya se leyeron las guardadas en la carpeta, así que la lista del visor manda al guardar.
+  const tagKey = 'tags_' + (h.number || key);
+  function renderTags() {
+    const list = $('tag-list');
+    list.textContent = '';
+    tagState.tags.forEach(t => {
+      const chip = el('span', 'tag', t);
+      const x = el('button', '', '×');
+      x.type = 'button';
+      x.title = `Quitar «${t}»`;
+      x.setAttribute('aria-label', `Quitar la etiqueta ${t}`);
+      x.onclick = () => { setTags(tagState.tags.filter(y => y !== t)); $('tag-input').focus(); };
+      chip.appendChild(x);
+      list.appendChild(chip);
+    });
+    const opts = $('tag-options');
+    opts.textContent = '';
+    tagState.known.filter(t => !tagState.tags.includes(t)).forEach(t => { const o = el('option'); o.value = t; opts.appendChild(o); });
+    $('md').textContent = buildText();
+  }
+  function setTags(tags, { silent } = {}) {
+    tagState.tags = [...new Set(tags.map(SieCarpeta.normTag).filter(Boolean))];
+    renderTags();
+    if (!silent) {
+      chrome.storage.local.set({ [tagKey]: tagState.tags });
+      $('tag-note').textContent = 'Se guardan con la incidencia al pulsar «Guardar».';
+    }
+  }
+  const addFromInput = () => {
+    const v = $('tag-input').value;
+    if (!v.trim()) return;
+    setTags([...tagState.tags, ...v.split(',')]);
+    $('tag-input').value = '';
+  };
+  $('tag-input').addEventListener('keydown', ev => {
+    if (ev.key === 'Enter' || ev.key === ',') { ev.preventDefault(); addFromInput(); }
+    else if (ev.key === 'Backspace' && !ev.target.value && tagState.tags.length) setTags(tagState.tags.slice(0, -1));
+  });
+  // Elegir una sugerencia de la lista la añade directamente.
+  $('tag-input').addEventListener('input', ev => { if (tagState.known.includes(ev.target.value) && ev.inputType !== 'insertText') addFromInput(); });
+  $('tag-input').addEventListener('blur', addFromInput);
+  (async () => {
+    try { const c = await chrome.storage.local.get(tagKey); if (Array.isArray(c[tagKey])) setTags(c[tagKey], { silent: true }); } catch (_) {}
+    try {
+      const r = await chrome.runtime.sendMessage({ type: 'tags-info', folder: fileSafe(h.number || 'incidencia') });
+      if (r && r.ok) {
+        tagState.known = r.known || [];
+        if (r.current) setTags(r.current, { silent: true }); // lo guardado en la carpeta manda
+        tagState.loaded = true;
+        renderTags();
+      }
+    } catch (_) { /* sin carpeta: se suman al guardar */ }
+  })();
+  renderTags();
+
   // ---------- guardar en la carpeta elegida (markdown + adjuntos) ----------
   const fileSafe = n => n.normalize('NFC').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'archivo';
   function filesToSave() {
@@ -840,7 +900,26 @@
       files.push({ path: `adjuntos/${name}`, dataUrl: a.dataUrl });
     });
     files.unshift({ path: 'incidencia.md', text: buildText(paths) });
-    return { folder, files };
+    return { folder, files, meta: { frontmatter: frontmatter(), tags: tagState.tags, tagsLoaded: tagState.loaded } };
+  }
+
+  // Datos de la incidencia para el bloque inicial de incidencia.md (y el índice de la carpeta).
+  function frontmatter() {
+    const f = re => { const x = (data.fields || []).find(y => re.test(y.label)); return x ? x.value.trim() : ''; };
+    const last = teamSteps[teamSteps.length - 1];
+    const resolver = [...teamSteps].reverse().find(s => s.closed);
+    return {
+      incidencia: h.number || '', titulo: h.summary || '', estado: h.status || '', prioridad: h.priority || '',
+      servicio: f(/^servicio$/i), activo: f(/^activo afectado/i),
+      categoria_operacional: f(/^categor[ií]a operacional/i), categoria_producto: f(/^categor[ií]a de producto$/i),
+      categoria_resolucion: f(/^categor[ií]a de resoluci[oó]n$/i),
+      equipo_actual: (last && last.group) || f(/^grupo de soporte/i),
+      equipo_resolutor: closedNow && resolver ? resolver.group : '',
+      equipos: [...new Set(teamSteps.map(s => s.group))],
+      reaperturas: String(teamSteps.filter(s => s.reopened).length || 0),
+      abierta: h.created || '', tiempo_total: startTs ? fmtDur(Math.max(0, endTs - startTs)) : '',
+      resolucion: f(/^nota de resoluci/i), url: data.sourceUrl || '', guardada: new Date().toLocaleString('es-ES')
+    };
   }
 
   let toastTimer;
@@ -868,7 +947,15 @@
   }
   // Copia el prompt; si el navegador no lo permite (la ventana no tiene el foco), ofrece un botón.
   const PASTE = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘V' : 'Ctrl+V';
+  // Tras guardar, las etiquetas del visor ya son las de la carpeta (incluidas las que añadió el agente).
+  function afterSave(r) {
+    tagState.loaded = true;
+    if (Array.isArray(r.tags)) setTags(r.tags, { silent: true });
+    chrome.storage.local.set({ [tagKey]: tagState.tags });
+    $('tag-note').textContent = '';
+  }
   async function copyPrompt(r, savedText) {
+    afterSave(r);
     const text = await promptFor(r);
     try {
       await navigator.clipboard.writeText(text);
@@ -923,8 +1010,8 @@
     btn.disabled = true;
     saveLabel('Guardando…', false, 'busy');
     try {
-      const { folder, files } = filesToSave();
-      const r = await chrome.runtime.sendMessage({ type: 'save-files', folder, files });
+      const { folder, files, meta } = filesToSave();
+      const r = await chrome.runtime.sendMessage({ type: 'save-files', folder, files, meta });
       if (r && r.ok) {
         saveLabel('Guardado', true, 'ok');
         await copyPrompt(r, `Guardado en ${r.folderName}/${r.folder}.`);
@@ -934,7 +1021,7 @@
       if (r && (r.reason === 'no-folder' || r.reason === 'permission')) {
         // Primera vez (o permiso caducado): se elige la carpeta en una ventanita y allí se termina de guardar.
         pendingToken = crypto.randomUUID();
-        await chrome.storage.local.set({ pendingSave: { token: pendingToken, folder, files } });
+        await chrome.storage.local.set({ pendingSave: { token: pendingToken, folder, files, meta } });
         await chrome.runtime.sendMessage({ type: 'open-options', save: true, reason: r.reason });
         saveLabel(r.reason === 'no-folder' ? 'Elige la carpeta…' : 'Da permiso…', false, 'busy');
         return;

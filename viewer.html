@@ -12,6 +12,13 @@
       <div id="number" class="inc-num"></div>
       <h1 id="title">Cargando…</h1>
       <p id="lede" class="lede"></p>
+      <div id="tags" class="tags" aria-label="Etiquetas">
+        <svg class="ico tags-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></svg>
+        <span id="tag-list" class="tag-list"></span>
+        <input id="tag-input" class="tag-input" list="tag-options" placeholder="Añadir etiqueta" autocomplete="off" spellcheck="false" aria-label="Añadir etiqueta">
+        <datalist id="tag-options"></datalist>
+        <span id="tag-note" class="tag-note muted"></span>
+      </div>
     </div>
     <div class="head-side">
       <div id="update" class="update-pill" role="status" hidden>

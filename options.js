@@ -54,7 +54,7 @@
     if (!pendingSave) return false;
     msg('Guardando la incidencia…');
     try {
-      const r = await SieCarpeta.write(handle, pendingSave.folder, pendingSave.files);
+      const r = await SieCarpeta.write(handle, pendingSave.folder, pendingSave.files, pendingSave.meta);
       await chrome.storage.local.remove('pendingSave');
       await chrome.storage.local.set({ lastSave: { ok: true, token: pendingSave.token, at: Date.now(), ...r } });
       msg(`Incidencia guardada en ${r.folderName}/${r.folder}.` + (fromSave ? ' Revisa la ruta para el agente y pulsa «Guardar cambios» para volver.' : ''), 'ok');

@@ -112,8 +112,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'save-files') {
     (async () => {
       await ensureOffscreen();
-      return chrome.runtime.sendMessage({ target: 'offscreen', type: 'write', folder: msg.folder, files: msg.files });
+      return chrome.runtime.sendMessage({ target: 'offscreen', type: 'write', folder: msg.folder, files: msg.files, meta: msg.meta });
     })().then(sendResponse, err => sendResponse({ ok: false, reason: 'error', error: String(err && err.message || err) }));
+    return true;
+  }
+  if (msg.type === 'tags-info') {
+    ensureOffscreen().then(() => chrome.runtime.sendMessage({ target: 'offscreen', type: 'tags-info', folder: msg.folder }))
+      .then(sendResponse, () => sendResponse({ ok: false }));
     return true;
   }
   if (msg.type === 'folder-status') {
