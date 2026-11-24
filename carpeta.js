@@ -170,6 +170,7 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
         incidencia: d.incidencia || name, carpeta: name, titulo: d.titulo || '', estado: d.estado || '',
         servicio: d.servicio || '', categoria: d.categoria_operacional || d.categoria_producto || '',
         equipo: d.equipo_resolutor || d.equipo_actual || '', abierta: d.abierta || '',
+        activo: d.activo || '', url: d.url || '',
         etiquetas: uniqTags([].concat(c.etiquetas || [], d.etiquetas || [])),
         causa: c.causa || '', solucion: c.solucion || d.resolucion || ''
       });
@@ -183,6 +184,37 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
     await writeText(root, 'indice.md', md);
     await writeText(root, 'indice.jsonl', rows.map(r => JSON.stringify(r)).join('\n') + (rows.length ? '\n' : ''));
     return rows;
+  }
+
+  // ---------- incidencias relacionadas ----------
+  // Puntuación sencilla con el índice: etiquetas en común (lo que más pesa), mismo servicio,
+  // categoría o activo, y palabras del título en común.
+  const STOP = new Set('para porque desde sobre entre cuando donde como pero tiene tienen hace cliente clientes error problema incidencia indica puede pueden esta este estos estas solicitud'.split(' '));
+  const words = t => new Set(String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !STOP.has(w)));
+  async function related(handle, cur, limit = 6) {
+    const jsonl = (await readText(handle, 'indice.jsonl')) || '';
+    const tags = uniqTags(cur.tags || []);
+    const fm = cur.frontmatter || {};
+    const me = safe(cur.folder || '');
+    const tw = words(fm.titulo);
+    const eq = (a, b) => a && b && String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+    const out = [];
+    jsonl.split('\n').forEach(l => {
+      let r; try { r = JSON.parse(l); } catch (_) { return; }
+      if (!r || r.carpeta === me) return;
+      const shared = (r.etiquetas || []).filter(t => tags.includes(t));
+      const reasons = [];
+      let score = shared.length * 3;
+      if (eq(r.servicio, fm.servicio)) { score += 2; reasons.push('mismo servicio'); }
+      if (eq(r.categoria, fm.categoria_operacional || fm.categoria_producto)) { score += 2; reasons.push('misma categoría'); }
+      if (eq(r.activo, fm.activo)) { score += 2; reasons.push('mismo activo'); }
+      const common = [...words(r.titulo)].filter(w => tw.has(w)).length;
+      if (common) { score += Math.min(common, 3); reasons.push(common === 1 ? 'una palabra del título en común' : `${common} palabras del título en común`); }
+      if (score >= 3) out.push({ ...r, shared, reasons, score });
+    });
+    out.sort((a, b) => b.score - a.score || (b.solucion ? 1 : 0) - (a.solucion ? 1 : 0));
+    return out.slice(0, limit);
   }
 
   // Etiquetas para el visor: las de esta incidencia y todas las conocidas (vocabulario + índice).
@@ -261,5 +293,5 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
       `Al terminar, rellena su clasificacion.md con etiquetas, causa y solución.`;
   }
 
-  return { get, set, clear, status, write, safe, prompt, tagsInfo, normTag, FM };
+  return { get, set, clear, status, write, safe, prompt, tagsInfo, related, normTag, FM };
 })();

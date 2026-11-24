@@ -856,6 +856,7 @@
   function setTags(tags, { silent } = {}) {
     tagState.tags = [...new Set(tags.map(SieCarpeta.normTag).filter(Boolean))];
     renderTags();
+    if (typeof refreshRelated === 'function') refreshRelated();
     if (!silent) {
       chrome.storage.local.set({ [tagKey]: tagState.tags });
       $('tag-note').textContent = 'Se guardan con la incidencia al pulsar «Guardar».';
@@ -887,6 +888,54 @@
     } catch (_) { /* sin carpeta: se suman al guardar */ }
   })();
   renderTags();
+  refreshRelated();
+
+  // ---------- incidencias relacionadas (fase 3) ----------
+  // Se calculan con el índice de la carpeta; se recalculan al cambiar las etiquetas y al guardar.
+  var relatedT; // var: refreshRelated() se puede llamar antes de llegar a esta línea
+  function refreshRelated() {
+    clearTimeout(relatedT);
+    relatedT = setTimeout(async () => {
+      let r;
+      try { r = await chrome.runtime.sendMessage({ type: 'related', current: { folder: fileSafe(h.number || 'incidencia'), frontmatter: frontmatter(), tags: tagState.tags } }); } catch (_) { return; }
+      const card = $('related-card'), list = $('related');
+      if (!r || !r.ok || !r.items || !r.items.length) { card.hidden = true; return; }
+      list.textContent = '';
+      r.items.forEach(it => {
+        const li = el('li');
+        const head = el('div', 'rel-head');
+        const num = el('span', 'rel-num');
+        if (it.url) { const a = el('a', 'u', it.incidencia); a.href = it.url; a.target = '_blank'; a.rel = 'noopener'; a.title = 'Abrir en SmartIT'; num.appendChild(a); }
+        else num.textContent = it.incidencia;
+        head.appendChild(num);
+        if (it.estado) head.appendChild(el('span', 'rel-state' + (isClosedStatus(it.estado) ? ' done' : ''), it.estado));
+        li.appendChild(head);
+        li.appendChild(el('div', 'rel-title', it.titulo || '(sin título)'));
+        if (it.shared.length) {
+          const tg = el('div', 'rel-tags');
+          it.shared.forEach(t => { const c = el('span', 'tag', t); c.style.setProperty('--tc', tagColor(t)); tg.appendChild(c); });
+          li.appendChild(tg);
+        }
+        if (it.reasons.length) li.appendChild(el('div', 'rel-why', it.reasons.join(' · ').replace(/^./, m => m.toUpperCase())));
+        const sol = [it.causa && ['Causa', it.causa], it.solucion && ['Solución', it.solucion]].filter(Boolean);
+        if (sol.length) {
+          const p = el('div', 'rel-sol');
+          sol.forEach(([k, v], i) => { if (i) p.append(' '); p.append(el('strong', '', k + ': '), v); });
+          li.appendChild(p);
+          requestAnimationFrame(() => {
+            if (p.scrollHeight > p.clientHeight + 2) {
+              const more = el('button', 'rel-more', 'Ver más');
+              more.type = 'button';
+              more.onclick = () => { const o = p.classList.toggle('open'); more.textContent = o ? 'Ver menos' : 'Ver más'; };
+              li.appendChild(more);
+            }
+          });
+        } else if (it.equipo) li.appendChild(el('div', 'rel-why', `Equipo: ${it.equipo}. Sin solución anotada todavía.`));
+        list.appendChild(li);
+      });
+      card.hidden = false;
+    }, 250);
+  }
 
   // ---------- guardar en la carpeta elegida (markdown + adjuntos) ----------
   const fileSafe = n => n.normalize('NFC').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'archivo';

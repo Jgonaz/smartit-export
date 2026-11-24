@@ -14,6 +14,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     })().then(sendResponse, () => sendResponse({ ok: false }));
     return true;
   }
+  if (msg.type === 'related') {
+    (async () => {
+      const h = await SieCarpeta.get();
+      if (!h || (await SieCarpeta.status(h)) !== 'granted') return { ok: false };
+      return { ok: true, items: await SieCarpeta.related(h, msg.current || {}) };
+    })().then(sendResponse, () => sendResponse({ ok: false }));
+    return true;
+  }
   if (msg.type !== 'write') return;
   (async () => {
     const handle = await SieCarpeta.get();

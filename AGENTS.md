@@ -92,7 +92,7 @@ Si la respuesta es HTML o JSON cuando no debería, se trata como error y el viso
   - `incidencia.md` empieza con un bloque YAML (frontmatter) con los datos de la ficha (servicio, categorías, equipos, estado, etiquetas…). Lo genera `frontmatter()` en `viewer.js`.
   - `clasificacion.md` guarda etiquetas, causa, solución y notas libres. Lo mantienen la persona y el agente: al volver a guardar solo se actualizan las etiquetas. Si el visor pudo leer las guardadas (`tagsLoaded`), su lista manda; si no, se suman para no perder ninguna.
   - En la raíz: `indice.md` e `indice.jsonl` se rehacen leyendo todas las incidencias (así siguen completos aunque varias personas guarden en una carpeta compartida). `etiquetas.md` es el vocabulario: las etiquetas nuevas se añaden en «Sin describir» sin tocar lo escrito. `AGENTS.md` lleva instrucciones para el agente; se reescribe solo si conserva la marca de «generado», para respetar los cambios a mano.
-  - El visor pide `tags-info` para sugerir etiquetas y cargar las de la incidencia. El prompt copiado manda leer primero el `AGENTS.md` de la carpeta.
+  - El visor pide `tags-info` para sugerir etiquetas y cargar las de la incidencia, y `related` para la tarjeta «Relacionadas». `SieCarpeta.related()` puntúa con el índice: 3 puntos por etiqueta en común, 2 por mismo servicio, categoría o activo, y 1 por palabra del título en común (máximo 3). Muestra las de 3 puntos o más, con su causa y solución. El prompt copiado manda leer primero el `AGENTS.md` de la carpeta.
 - La API nunca da la ruta completa de la carpeta, solo su nombre. Por eso la ruta que verá el agente se escribe a mano en opciones (`agentPath`) y se usa en el prompt (`SieCarpeta.prompt`).
 
 ## Probar sin SmartIT
