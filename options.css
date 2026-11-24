@@ -28,3 +28,9 @@ body.opt.popup .opt-foot { position: sticky; }
 .opt-foot { position: fixed; left: 0; right: 0; bottom: 0; background: var(--bg); border-top: 1px solid var(--hair); z-index: 5; }
 .opt-foot-in { max-width: 720px; margin: 0 auto; padding: 14px 32px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .opt-foot .small-p { margin: 0; }
+.opt-check { margin-top: 6px; font-size: 14.5px; font-weight: 600; }
+.opt-check input { width: 18px; height: 18px; }
+#update-status { margin: 0; }
+html[data-style="classic"] .opt-check input { accent-color: var(--accent); }
+/* En la ventanita de «Guardar» solo interesa la carpeta y la ruta. */
+body.opt.popup #update-card { display: none; }

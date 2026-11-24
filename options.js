@@ -109,6 +109,21 @@
     t = setTimeout(() => chrome.storage.local.set({ agentPath: $('agent-path').value.trim() }), 300);
   });
 
+  // ---------- actualizaciones ----------
+  const { autoUpdateCheck = true } = await chrome.storage.local.get('autoUpdateCheck');
+  $('auto-update').checked = autoUpdateCheck !== false;
+  $('auto-update').addEventListener('change', () => chrome.storage.local.set({ autoUpdateCheck: $('auto-update').checked }));
+  const showUpdate = info => {
+    if (!info || info.failed) { $('update-status').textContent = 'No se pudo comprobar (¿sin conexión?).'; return; }
+    $('update-status').textContent = info.available
+      ? `Hay una versión nueva: ${info.remote} (tienes la ${info.installed}).`
+      : `Tienes la última versión (${info.installed}).`;
+  };
+  $('check-now').addEventListener('click', async () => {
+    $('update-status').textContent = 'Comprobando…';
+    try { showUpdate(await chrome.runtime.sendMessage({ type: 'update-info', force: true })); } catch (_) { showUpdate(null); }
+  });
+
   // Tema y estilo como en el visor.
   const applyLook = ({ theme, style }) => {
     const dark = theme === 'dark' || (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);

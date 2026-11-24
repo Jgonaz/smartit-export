@@ -42,31 +42,37 @@ const newer = (a, b) => { // ¿a > b? (versiones tipo 1.2.3)
   return false;
 };
 
-async function updateInfo() {
+// force: «Comprobar ahora» desde los ajustes (aunque la comprobación automática esté desactivada).
+async function updateInfo(force) {
   const installed = chrome.runtime.getManifest().version;
-  let { updateCheck = {}, updateDismissed = '' } = await chrome.storage.local.get(['updateCheck', 'updateDismissed']);
-  if (!updateCheck.checkedAt || Date.now() - updateCheck.checkedAt > DAY) {
+  let { updateCheck = {}, updateDismissed = '', autoUpdateCheck = true } = await chrome.storage.local.get(['updateCheck', 'updateDismissed', 'autoUpdateCheck']);
+  // Comprobación automática desactivada: no se consulta GitHub ni se muestran avisos.
+  if (!autoUpdateCheck && !force) return { installed, remote: '', available: false, dismissed: false, disabled: true, repo: `https://github.com/${REPO}` };
+  let failed = false;
+  if (force || !updateCheck.checkedAt || Date.now() - updateCheck.checkedAt > DAY) {
     try {
       const r = await fetch(REMOTE_MANIFEST, { cache: 'no-store' });
       if (r.ok) {
         const m = await r.json();
         updateCheck = { checkedAt: Date.now(), remote: String(m.version || '') };
       } else {
+        failed = true;
         updateCheck = { checkedAt: Date.now(), remote: updateCheck.remote || '' };
       }
     } catch (_) {
+      failed = true;
       // Sin conexión: se reintenta en la próxima consulta, sin guardar la fecha.
     }
     if (updateCheck.checkedAt) await chrome.storage.local.set({ updateCheck });
   }
   const remote = updateCheck.remote || '';
   const available = !!remote && newer(remote, installed);
-  return { installed, remote, available, dismissed: available && updateDismissed === remote, repo: `https://github.com/${REPO}` };
+  return { installed, remote, available, failed: force && failed, checkedAt: updateCheck.checkedAt || 0, dismissed: available && updateDismissed === remote, repo: `https://github.com/${REPO}` };
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.type === 'update-info') {
-    updateInfo().then(sendResponse).catch(() => sendResponse(null));
+    updateInfo(!!msg.force).then(sendResponse).catch(() => sendResponse(null));
     return true;
   }
   if (msg && msg.type === 'update-dismiss') {

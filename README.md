@@ -47,7 +47,7 @@ Todo ocurre en local, en tu navegador:
 - Es de solo lectura: no crea, modifica ni borra nada en SmartIT. Lo único que pulsa son los botones de paginación de la actividad.
 - No guarda contraseñas ni tokens. La cabecera de sesión se toma en el momento de las peticiones de la propia página y no se almacena.
 - «Guardar» solo escribe dentro de la carpeta que tú elijas, con el permiso que concedes en Chrome. La extensión no conoce la ruta completa de esa carpeta, solo su nombre.
-- Una vez al día, como mucho, descarga el `manifest.json` público de este repositorio para avisar si hay una versión nueva. No envía ningún dato.
+- Una vez al día, como mucho (se puede desactivar en los ajustes de la extensión), descarga el `manifest.json` público de este repositorio para avisar si hay una versión nueva. No envía ningún dato.
 - El visor es una página de la propia extensión que se muestra dentro de SmartIT en un marco aislado: SmartIT no puede leer su contenido. Las exportaciones se guardan en el almacenamiento local de la extensión (solo las 10 más recientes) para poder mostrarlas.
 
 ## Para quien contribuya

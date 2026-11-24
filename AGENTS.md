@@ -7,7 +7,7 @@ Guía para agentes (y personas) que retomen este repositorio. Recoge lo que se a
 - **El repo es público.** No escribas nunca el dominio real de ninguna empresa (usa el genérico `*.onbmc.com`), ni números de incidencia, nombres de personas, correos u otros datos reales. Las capturas y los datos de prueba son siempre inventados.
 - **Nada se sube sin el visto bueno del dueño del repo.** Prepara los cambios en local, entrega un .zip para probar y espera a que lo apruebe antes de hacer push.
 - **Autoría:** los commits van a nombre del dueño del repo y sin líneas `Co-Authored-By` ni similares de herramientas de IA (no deben aparecer como colaboradores en GitHub).
-- **Versión:** sube `version` en `manifest.json` en cada cambio publicado. La extensión compara su versión con la del `manifest.json` de `main` (una vez al día) para mostrar el aviso de versión nueva.
+- **Versión:** sube `version` en `manifest.json` en cada cambio publicado. La extensión compara su versión con la del `manifest.json` de `main` (una vez al día) para mostrar el aviso de versión nueva. Se puede desactivar en las opciones (`autoUpdateCheck`, activado por defecto); «Comprobar ahora» consulta aunque esté desactivado.
 - **Solo lectura:** la extensión no crea, modifica ni borra nada en SmartIT. Lo único que pulsa son los botones de paginación de la actividad.
 - **Sesión:** nunca pidas, registres ni guardes tokens o cabeceras de sesión. Si necesitas que alguien te pase una petición de red para depurar, pide que sustituya los valores sensibles por `XXX`.
 - **Sin peticiones externas:** todo es local. Las fuentes (DM Sans, JetBrains Mono, Inter; licencia OFL, en `fonts/`) van dentro de la extensión.

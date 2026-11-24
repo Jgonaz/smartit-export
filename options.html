@@ -39,6 +39,16 @@
       <div class="muted small-p">Prompt que se copia al guardar:</div>
       <pre id="prompt-preview" class="opt-pre"></pre>
     </section>
+
+    <section id="update-card" class="card opt-card" style="--sh: var(--butter)">
+      <h2 class="mono-h">Actualizaciones</h2>
+      <label class="check opt-check"><input type="checkbox" id="auto-update" checked> Comprobar automáticamente si hay versiones nuevas</label>
+      <p class="muted small-p">Una vez al día, como mucho, se consulta la versión publicada en el repositorio de GitHub y, si hay una más nueva, se avisa en el visor y en el icono de SmartIT. No se envía ningún dato.</p>
+      <div class="opt-actions">
+        <button type="button" id="check-now" class="text-link"><span class="u">Comprobar ahora</span></button>
+        <span id="update-status" class="muted small-p" role="status"></span>
+      </div>
+    </section>
   </main>
   <footer class="opt-foot">
     <div class="opt-foot-in">
