@@ -833,7 +833,26 @@
   const tagKey = 'tags_' + (h.number || key);
   // Color pastel fijo por etiqueta (el mismo en todas las incidencias): se elige con un hash del nombre.
   const TAG_COLORS = ['#F7C6D9', '#FBD3C0', '#FDE7A9', '#D6EDB5', '#BFE6D6', '#BFE0F2', '#CFD5FA', '#DCCDF6', '#F3CDEB', '#E6DCCB'];
-  const tagColor = t => { let x = 0; for (const c of t) x = (x * 31 + c.codePointAt(0)) >>> 0; return TAG_COLORS[x % TAG_COLORS.length]; };
+  // Cada etiqueta nueva recibe el primer color libre; cuando ya se han usado todos, el menos usado.
+  // La asignación se recuerda (tagColors), así una etiqueta tiene siempre el mismo color.
+  const tagColorMap = {};
+  let tagColorsLoaded = false;
+  const tagColorsReady = chrome.storage.local.get('tagColors')
+    .then(r => { Object.assign(tagColorMap, r.tagColors || {}); }).catch(() => {})
+    .finally(() => { tagColorsLoaded = true; });
+  let tagColorSaveT;
+  function tagColor(t) {
+    if (!tagColorsLoaded) return 'var(--card)'; // un instante, hasta leer los colores ya asignados
+    if (!(t in tagColorMap)) {
+      const used = new Array(TAG_COLORS.length).fill(0);
+      Object.values(tagColorMap).forEach(i => { if (used[i] != null) used[i]++; });
+      const min = Math.min(...used);
+      tagColorMap[t] = used.indexOf(min);
+      clearTimeout(tagColorSaveT);
+      tagColorSaveT = setTimeout(() => chrome.storage.local.set({ tagColors: tagColorMap }).catch(() => {}), 200);
+    }
+    return TAG_COLORS[tagColorMap[t] % TAG_COLORS.length];
+  }
   function renderTags() {
     const list = $('tag-list');
     list.textContent = '';
@@ -900,6 +919,7 @@
     } catch (_) { /* sin carpeta: se suman al guardar */ }
   })();
   renderTags();
+  tagColorsReady.then(renderTags); // con los colores ya asignados antes
   refreshRelated();
 
   // ---------- incidencias relacionadas (fase 3) ----------
