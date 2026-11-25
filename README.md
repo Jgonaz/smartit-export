@@ -19,7 +19,7 @@ Actualmente, la actividad de SmartIT está paginada y no se puede copiar entera 
 
 Abre una incidencia y pulsa el icono 📋 de la cabecera de SmartIT, a la izquierda de la lupa. El contenido de SmartIT se funde a blanco mientras se analiza la incidencia y el visor aparece en su lugar, dentro de la propia página. Para volver a SmartIT, pulsa el icono de nuevo (ahora es una flecha circular) o Esc:
 
-- «Copiar»: copia toda la incidencia en Markdown (las imágenes no se copian; para eso, «Guardar»). El selector Vista / Markdown muestra ese texto, y hay opciones para incluir o quitar los eventos automáticos (cambios de estado, asignaciones…) y los datos de la ficha.
+- «Copiar»: copia toda la incidencia en Markdown (las imágenes no se copian; para eso, «Guardar»). El selector Vista / Markdown muestra ese texto, y hay una opción para incluir o quitar los eventos automáticos (cambios de estado, asignaciones…).
 - Si la incidencia tiene un resumen de HelixGPT, se muestra completo al principio de la conversación y se incluye al principio del Markdown.
 - «Opciones» (arriba a la derecha del visor): Ayuda (qué archivos se guardan y qué contiene cada uno) y Ajustes (tema claro, oscuro o del sistema, estilo «Tarjetas» o «Clásico» y carpeta para guardar).
 - Etiquetas: debajo del título puedes añadir etiquetas (con sugerencias de las que ya usas). Se guardan con la incidencia.
