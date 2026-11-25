@@ -89,6 +89,13 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 
 /* estado del guardado: fecha del último guardado o cambios sin guardar */
 .save-status { align-self: flex-end; margin-top: -4px; font-size: 12.5px; color: var(--grey); text-align: right; animation: tag-in .25s ease; }
+.doc-status { align-self: flex-end; margin-top: -10px; font-size: 12.5px; color: var(--grey); text-align: right; animation: tag-in .25s ease; }
+.doc-status.done { color: var(--ink); }
+.doc-status.done::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--mint); border: 1px solid var(--border); vertical-align: 1px; }
+.doc-status.partial::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--butter); border: 1px solid var(--border); vertical-align: 1px; }
+.doc-status a { color: inherit; font-weight: 600; }
+html[data-style="classic"] .doc-status a { color: var(--accent); text-decoration: none; }
+html[data-style="classic"] .doc-status.done::before { background: var(--ok); border: 0; }
 .save-status.dirty { color: var(--wait); font-weight: 600; }
 .btn-card { position: relative; }
 .btn-card.has-dot::after { content: ""; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--wait); box-shadow: 0 0 0 2px var(--card); animation: tag-in .25s ease; }

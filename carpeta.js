@@ -200,6 +200,10 @@ const SieCarpeta = (() => {
     return out.slice(0, limit);
   }
 
+  // Estado de la documentación externa (si el equipo la usa), tal cual está en clasificacion.md.
+  const docOf = d => (d.documentacion || d.documentacion_url)
+    ? { estado: String(d.documentacion || '').trim().toLowerCase(), url: d.documentacion_url || '', fecha: d.documentacion_fecha || '' } : null;
+
   // Etiquetas para el visor: las de esta incidencia y todas las conocidas (vocabulario + índice).
   async function tagsInfo(handle, folder) {
     const root = handle;
@@ -207,16 +211,20 @@ const SieCarpeta = (() => {
     const known = new Set(vocab.keys());
     const jsonl = (await readText(root, 'indice.jsonl')) || '';
     jsonl.split('\n').forEach(l => { try { (JSON.parse(l).etiquetas || []).forEach(t => known.add(t)); } catch (_) {} });
-    let current = null, savedAt = '';
+    let current = null, savedAt = '', doc = null;
     try {
       const dir = await root.getDirectoryHandle(safe(folder));
       const c = await readText(dir, 'clasificacion.md');
-      if (c != null) current = uniqTags(FM.parse(c).data.etiquetas || []);
+      if (c != null) {
+        const cd = FM.parse(c).data;
+        current = uniqTags(cd.etiquetas || []);
+        doc = docOf(cd);
+      }
       const inc = await readText(dir, 'incidencia.md');
       if (inc != null) savedAt = FM.parse(inc).data.guardada || '';
       if (inc != null && !savedAt) savedAt = '?'; // guardada con una versión anterior, sin fecha
     } catch (_) { /* aún no se ha guardado */ }
-    return { known: [...known].sort(), descriptions: Object.fromEntries(vocab), current, savedAt };
+    return { known: [...known].sort(), descriptions: Object.fromEntries(vocab), current, savedAt, doc };
   }
 
   // Al volver a guardar: incidencia.md se reescribe y adjuntos/ se rehace para que coincida con la
@@ -262,7 +270,7 @@ const SieCarpeta = (() => {
       await addToVocab(handle, tags);
       rows = await rebuildIndex(handle);
     } catch (err) { console.warn('[SmartIT export] índice', err); }
-    return { folderName: handle.name, folder: safe(folder), tags, indexed: rows ? rows.length : null };
+    return { folderName: handle.name, folder: safe(folder), tags, doc: docOf(clas), indexed: rows ? rows.length : null };
   }
 
   // Prompt que se copia al guardar. La plantilla se edita en los ajustes; variables:

@@ -873,7 +873,7 @@
     $('md').textContent = buildText();
   }
   // Debajo de los botones: cuándo se guardó por última vez, o que hay cambios sin guardar.
-  const saveState = { savedAt: '', dirty: false };
+  const saveState = { savedAt: '', dirty: false, doc: null };
   function renderSaveStatus() {
     const st = $('save-status');
     st.classList.toggle('dirty', saveState.dirty);
@@ -881,6 +881,25 @@
     if (saveState.dirty) { st.textContent = 'Etiquetas sin guardar · pulsa Guardar'; st.hidden = false; }
     else if (saveState.savedAt) { st.textContent = saveState.savedAt === '?' ? 'Guardada en tu carpeta' : `Guardada el ${dayMonth(saveState.savedAt)}`; st.hidden = false; }
     else st.hidden = true;
+    // Documentación externa (wiki, etc.), si el equipo la registra en clasificacion.md.
+    const d = saveState.doc, ds = $('doc-status');
+    ds.textContent = '';
+    ds.className = 'doc-status';
+    if (!d || (!d.url && (!d.estado || d.estado === 'pendiente' || d.estado === 'no-necesaria'))) {
+      if (d && d.estado === 'no-necesaria') { ds.textContent = 'No requiere documentación'; ds.hidden = false; }
+      else ds.hidden = true;
+      return;
+    }
+    ds.hidden = false;
+    const done = d.estado === 'documentada';
+    ds.classList.add(done ? 'done' : 'partial');
+    const fecha = /^\d{4}-\d{2}-\d{2}/.test(d.fecha) ? (() => { const [y, m, dd] = d.fecha.split('-'); return `${+dd} ${MON[+m - 1]}`; })() : d.fecha;
+    ds.append(done ? `Documentada${fecha ? ' el ' + fecha : ''}` : 'Documentación en curso');
+    if (d.url) {
+      const a = el('a', 'u', done ? 'Ver documentación' : 'Ver borrador');
+      a.href = d.url; a.target = '_blank'; a.rel = 'noopener';
+      ds.append(' · ', a);
+    }
   }
   function setTags(tags, { silent } = {}) {
     tagState.tags = [...new Set(tags.map(SieCarpeta.normTag).filter(Boolean))];
@@ -913,7 +932,9 @@
         tagState.known = r.known || [];
         if (r.current) setTags(r.current, { silent: true }); // lo guardado en la carpeta manda
         tagState.loaded = true;
-        if (r.savedAt) { saveState.savedAt = r.savedAt; renderSaveStatus(); }
+        if (r.savedAt) saveState.savedAt = r.savedAt;
+        saveState.doc = r.doc || null;
+        renderSaveStatus();
         renderTags();
       }
     } catch (_) { /* sin carpeta: se suman al guardar */ }
@@ -1075,6 +1096,7 @@
     chrome.storage.local.set({ [tagKey]: tagState.tags });
     saveState.dirty = false;
     saveState.savedAt = nowStamp();
+    if ('doc' in r) saveState.doc = r.doc || null;
     renderSaveStatus();
     return refreshRelated({ flash: true }); // el índice ya está al día: se buscan las relacionadas
   }
