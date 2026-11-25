@@ -1043,8 +1043,8 @@
   }
 
   async function promptFor(r) {
-    const { agentPath = '' } = await chrome.storage.local.get('agentPath');
-    return SieCarpeta.prompt({ agentPath, folderName: r.folderName, folder: r.folder, number: h.number, summary: h.summary });
+    const { agentPath = '', promptTemplate = '' } = await chrome.storage.local.get(['agentPath', 'promptTemplate']);
+    return SieCarpeta.prompt({ agentPath, folderName: r.folderName, folder: r.folder, number: h.number, summary: h.summary, template: promptTemplate });
   }
   // Copia el prompt; si el navegador no lo permite (la ventana no tiene el foco), ofrece un botón.
   const PASTE = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘V' : 'Ctrl+V';

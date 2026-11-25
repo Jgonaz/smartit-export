@@ -38,10 +38,13 @@
     </section>
 
     <section id="agent-card" class="card opt-card" style="--sh: var(--sky)">
-      <h2 class="mono-h">Ruta para el agente</h2>
+      <h2 class="mono-h">Para el agente</h2>
       <p class="muted small-p">Chrome no le dice a la extensión la ruta completa de la carpeta. Escribe aquí cómo la ve tu agente (por ejemplo, desde WSL <code>/mnt/c/Users/tu-usuario/incidencias</code>) para que el prompt copiado la incluya.</p>
       <input id="agent-path" class="opt-input" type="text" spellcheck="false" placeholder="/mnt/c/Users/tu-usuario/incidencias" autocomplete="off">
-      <div class="muted small-p">Prompt que se copia al guardar:</div>
+      <label class="muted small-p opt-label" for="prompt-template">Prompt que se copia al guardar (puedes adaptarlo a tu agente):</label>
+      <textarea id="prompt-template" class="opt-input opt-textarea" rows="4" spellcheck="false"></textarea>
+      <div class="muted small-p">Variables: <code>{incidencia}</code> <code>{titulo}</code> <code>{carpeta}</code> (ruta de la incidencia) <code>{raiz}</code> (ruta de la carpeta elegida). <button type="button" id="prompt-reset" class="link-btn">Restaurar el de por defecto</button></div>
+      <div class="muted small-p opt-label">Así quedaría:</div>
       <pre id="prompt-preview" class="opt-pre"></pre>
     </section>
 

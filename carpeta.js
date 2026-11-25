@@ -85,55 +85,9 @@ const SieCarpeta = (() => {
   }
 
   // ---------- archivos de la raíz de la carpeta ----------
-  const MARK = '<!-- generado por SmartIT export, v3. Si editas este archivo a mano, borra esta línea para que la extensión no lo vuelva a escribir. -->';
-  const AGENTS_MD = `${MARK}
-# Incidencias guardadas desde SmartIT
-
-Cada subcarpeta es una incidencia (su número), guardada con la extensión «SmartIT export».
-
-\`\`\`
-INC000012345678/
-  incidencia.md      ficha, descripción y toda la actividad (se regenera al volver a guardar)
-  adjuntos/          imágenes y archivos de la incidencia (se regenera al volver a guardar)
-  clasificacion.md   etiquetas, causa, solución y, si se documenta en otro sitio, dónde (lo mantienen la persona y el agente; no se borra)
-  diagnostico.md     registro del diagnóstico, si lo hay (lo mantiene el agente; no se borra)
-indice.md            una fila por incidencia: título, servicio, equipo, etiquetas, solución y documentación
-indice.jsonl         lo mismo, una línea JSON por incidencia (para buscar con grep / jq)
-etiquetas.md         vocabulario de etiquetas con su significado
-\`\`\`
-
-## Cuando te pidan analizar una incidencia
-
-1. Lee su \`incidencia.md\` (y las imágenes de \`adjuntos/\`).
-2. **Busca incidencias parecidas antes de proponer nada.** Mira \`indice.md\` o busca en \`indice.jsonl\` por:
-   - las mismas etiquetas o etiquetas cercanas de \`etiquetas.md\`,
-   - el mismo servicio, categoría o activo afectado,
-   - palabras clave del problema y mensajes de error literales (busca también dentro de los \`incidencia.md\`).
-3. De las parecidas, lee su \`clasificacion.md\` (causa y solución) y, si hace falta, su \`incidencia.md\`.
-   Di cuáles son (número y título), qué tienen en común y cómo se resolvieron.
-4. Propón un diagnóstico y los siguientes pasos para la incidencia actual.
-
-## Después de analizarla
-
-Rellena o actualiza el \`clasificacion.md\` de la incidencia:
-
-- \`etiquetas\`: usa las de \`etiquetas.md\`. Si de verdad hace falta una nueva, añádela allí con una línea que la explique.
-  Formato: minúsculas y guiones (\`correo-no-llega\`), sin sinónimos de una ya existente.
-- \`causa\` y \`solucion\`: una o dos frases, lo bastante concretas para que sirvan la próxima vez.
-- \`documentacion\` (opcional): \`pendiente\`, \`no-necesaria\` o \`documentada\`, si el equipo documenta las incidencias en otra herramienta (una wiki, por ejemplo). Al documentarla, añade \`documentacion_url\` y \`documentacion_fecha\` (AAAA-MM-DD). Antes de documentar una, mira si una parecida ya tiene \`documentacion_url\`.
-- Debajo del bloque puedes escribir notas libres.
-
-No modifiques \`incidencia.md\` ni \`adjuntos/\`: se sobrescriben al volver a guardar desde SmartIT.
-El índice se regenera solo al guardar; si cambias un \`clasificacion.md\`, puedes actualizar a mano su fila del índice.
-
-Contienen datos reales de clientes: no los copies fuera de esta carpeta.
-`;
   const TAGS_HEAD = '# Vocabulario de etiquetas\n\nUna línea por etiqueta: `- etiqueta: qué significa`. Úsalas siempre igual (minúsculas y guiones) para que las búsquedas encuentren las incidencias parecidas.\n\n';
 
-  async function ensureAgentsMd(root) {
-    const cur = await readText(root, 'AGENTS.md');
-    if (cur == null || (cur.startsWith('<!-- generado por SmartIT export') && cur !== AGENTS_MD)) await writeText(root, 'AGENTS.md', AGENTS_MD);
-  }
+
   const vocabFrom = text => {
     const out = new Map();
     (text || '').split(/\r?\n/).forEach(l => {
@@ -194,7 +148,7 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
     // La columna de documentación solo aparece si alguna incidencia la usa.
     const withDoc = rows.some(r => r.documentacion || r.documentacion_url);
     const docCell = r => r.documentacion_url ? `[${cell(r.documentacion || 'documentada')}](${r.documentacion_url})` : cell(r.documentacion);
-    const md = '# Índice de incidencias\n\nSe regenera al guardar desde SmartIT. Cómo usarlo: ver `AGENTS.md`.\n\n' +
+    const md = '# Índice de incidencias\n\nSe regenera al guardar cada incidencia desde SmartIT.\n\n' +
       `| Incidencia | Título | Servicio | Equipo | Etiquetas | Solución |${withDoc ? ' Documentación |' : ''} Estado | Abierta |\n` +
       `|---|---|---|---|---|---|${withDoc ? '---|' : ''}---|---|\n` +
       rows.map(r => `| [${cell(r.incidencia)}](${encodeURI(r.carpeta)}/incidencia.md) | ${cell(r.titulo)} | ${cell(r.servicio)} | ${cell(r.equipo)} | ${cell(r.etiquetas.join(', '))} | ${cell(r.solucion)} |${withDoc ? ` ${docCell(r)} |` : ''} ${cell(r.estado)} | ${cell(r.abierta)} |`).join('\n') + '\n';
@@ -217,22 +171,31 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
     const me = safe(cur.folder || '');
     const tw = words(fm.titulo);
     const eq = (a, b) => a && b && String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+    const rows = [];
+    jsonl.split('\n').forEach(l => { try { const r = JSON.parse(l); if (r) rows.push(r); } catch (_) {} });
+    // Un servicio o activo que aparece en casi todas las incidencias (más del 60 %, con al menos 5)
+    // no distingue unas de otras: no suma. Así un equipo de un solo servicio no ve «parecidas» por eso.
+    const common = field => {
+      const v = String(fm[field] || '').trim().toLowerCase();
+      if (!v || rows.length < 5) return false;
+      return rows.filter(r => String(r[field] || '').trim().toLowerCase() === v).length / rows.length > 0.6;
+    };
+    const skipServicio = common('servicio'), skipActivo = common('activo');
     const out = [];
-    jsonl.split('\n').forEach(l => {
-      let r; try { r = JSON.parse(l); } catch (_) { return; }
-      if (!r || r.carpeta === me) return;
+    rows.forEach(r => {
+      if (r.carpeta === me) return;
       const shared = (r.etiquetas || []).filter(t => tags.includes(t));
       const reasons = [];
       let score = shared.length * 3;
-      if (eq(r.servicio, fm.servicio)) { score += 2; reasons.push('mismo servicio'); }
+      if (!skipServicio && eq(r.servicio, fm.servicio)) { score += 2; reasons.push('mismo servicio'); }
       if (eq(r.categoria, fm.categoria_operacional || fm.categoria_producto)) { score += 2; reasons.push('misma categoría'); }
-      if (eq(r.activo, fm.activo)) { score += 2; reasons.push('mismo activo'); }
-      const common = [...words(r.titulo)].filter(w => tw.has(w)).length;
-      if (common) { score += Math.min(common, 3); reasons.push(common === 1 ? 'una palabra del título en común' : `${common} palabras del título en común`); }
+      if (!skipActivo && eq(r.activo, fm.activo)) { score += 2; reasons.push('mismo activo'); }
+      const inTitle = [...words(r.titulo)].filter(w => tw.has(w)).length;
+      if (inTitle) { score += Math.min(inTitle, 3); reasons.push(inTitle === 1 ? 'una palabra del título en común' : `${inTitle} palabras del título en común`); }
       if (score >= 3) out.push({ ...r, shared, reasons, score });
     });
     out.sort((a, b) => b.score - a.score || (b.solucion ? 1 : 0) - (a.solucion ? 1 : 0));
-    related.total = jsonl.split('\n').filter(Boolean).length;
+    related.total = rows.length;
     related.more = Math.max(0, out.length - limit);
     return out.slice(0, limit);
   }
@@ -258,7 +221,7 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
 
   // Al volver a guardar: incidencia.md se reescribe y adjuntos/ se rehace para que coincida con la
   // incidencia actual. clasificacion.md (etiquetas, causa, solución) se conserva y solo se actualizan
-  // sus etiquetas. Después se ponen al día el vocabulario, el índice y el AGENTS.md de la raíz.
+  // sus etiquetas. Después se ponen al día el vocabulario y el índice de la raíz.
   // meta: { frontmatter: {...}, tags: [...], tagsLoaded: bool }
   async function write(handle, folder, files, meta) {
     meta = meta || {};
@@ -296,26 +259,29 @@ Contienen datos reales de clientes: no los copies fuera de esta carpeta.
     // La raíz: si falla algo aquí, la incidencia ya está guardada.
     let rows = null;
     try {
-      await ensureAgentsMd(handle);
       await addToVocab(handle, tags);
       rows = await rebuildIndex(handle);
     } catch (err) { console.warn('[SmartIT export] índice', err); }
     return { folderName: handle.name, folder: safe(folder), tags, indexed: rows ? rows.length : null };
   }
 
-  // Prompt que se copia al guardar, para pegarlo en el agente (Copilot CLI, etc.).
-  function prompt({ agentPath, folderName, folder, number, summary }) {
+  // Prompt que se copia al guardar. La plantilla se edita en los ajustes; variables:
+  // {incidencia} {titulo} {carpeta} (ruta de la incidencia) {raiz} (ruta de la carpeta elegida).
+  const DEFAULT_PROMPT = 'Analiza la incidencia {incidencia} – {titulo}.\n' +
+    'Está en {carpeta}/incidencia.md y sus adjuntos en {carpeta}/adjuntos/ (revisa también las imágenes).\n' +
+    'Busca incidencias parecidas en {raiz}/indice.md.';
+  function prompt({ agentPath, folderName, folder, number, summary, template }) {
     const base = (agentPath || '').trim().replace(/[\\/]+$/, '');
-    const sep = base.includes('\\') && !base.includes('/') ? '\\' : '/';
-    const dir = base ? base + sep + folder : `${folderName || 'la carpeta elegida'}${sep}${folder}`;
-    const title = [number, summary].filter(Boolean).join(' – ');
+    const win = base.includes('\\') && !base.includes('/');
     const root = base || folderName || 'la carpeta elegida';
-    return `Analiza la incidencia ${title || folder}.\n` +
-      `Antes de empezar, lee ${root}${sep}AGENTS.md (describe cómo están organizadas las incidencias guardadas ` +
-      `y cómo buscar otras parecidas en ${root}${sep}indice.md) y sigue sus pasos.\n` +
-      `La incidencia está en ${dir}${sep}incidencia.md y sus adjuntos en ${dir}${sep}adjuntos${sep} (revisa también las imágenes).\n` +
-      `Al terminar, rellena su clasificacion.md con etiquetas, causa y solución.`;
+    const dir = root + (win ? '\\' : '/') + folder;
+    let text = (template && template.trim()) || DEFAULT_PROMPT;
+    const vars = { incidencia: number || folder, titulo: summary || '', carpeta: dir, raiz: root };
+    text = text.replace(/\{(incidencia|titulo|carpeta|raiz)\}/g, (_, k) => vars[k]);
+    // Rutas de Windows: las barras de la plantilla («{carpeta}/adjuntos/») pasan a «\\».
+    if (win) text = text.replace(new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^\\s)]*', 'g'), m => m.replace(/\//g, '\\'));
+    return text.replace(/ – \./g, '.').replace(/[ \t]+\n/g, '\n').trim();
   }
 
-  return { get, set, clear, status, write, safe, prompt, tagsInfo, related, normTag, FM };
+  return { get, set, clear, status, write, safe, prompt, DEFAULT_PROMPT, tagsInfo, related, normTag, FM };
 })();

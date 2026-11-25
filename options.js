@@ -43,7 +43,7 @@
   async function renderPrompt(handle) {
     handle = handle || await SieCarpeta.get();
     $('prompt-preview').textContent = SieCarpeta.prompt({
-      agentPath: $('agent-path').value, folderName: handle && handle.name,
+      agentPath: $('agent-path').value, folderName: handle && handle.name, template: $('prompt-template').value,
       folder: 'INC000000123456', number: 'INC000000123456', summary: 'Título de la incidencia'
     });
   }
@@ -108,8 +108,17 @@
     await render();
   });
 
-  const { agentPath = '' } = await chrome.storage.local.get('agentPath');
+  const { agentPath = '', promptTemplate = '' } = await chrome.storage.local.get(['agentPath', 'promptTemplate']);
   $('agent-path').value = agentPath;
+  $('prompt-template').value = promptTemplate || SieCarpeta.DEFAULT_PROMPT;
+  // Se guarda vacío si es el de por defecto, para que futuras mejoras del prompt por defecto lleguen solas.
+  const savePrompt = () => {
+    const v = $('prompt-template').value.trim();
+    chrome.storage.local.set({ promptTemplate: v && v !== SieCarpeta.DEFAULT_PROMPT.trim() ? v : '' });
+  };
+  let pt;
+  $('prompt-template').addEventListener('input', () => { renderPrompt(); clearTimeout(pt); pt = setTimeout(savePrompt, 300); });
+  $('prompt-reset').addEventListener('click', () => { $('prompt-template').value = SieCarpeta.DEFAULT_PROMPT; renderPrompt(); savePrompt(); });
   let t;
   $('agent-path').addEventListener('input', () => {
     renderPrompt();
@@ -143,8 +152,9 @@
   // «Guardar cambios»: guarda la ruta para el agente y cierra la ventana.
   if (fromSave) $('foot-note').textContent = 'Al terminar, pulsa «Guardar cambios» para cerrar esta ventana.';
   $('done').addEventListener('click', async () => {
-    clearTimeout(t);
+    clearTimeout(t); clearTimeout(pt);
     await chrome.storage.local.set({ agentPath: $('agent-path').value.trim() });
+    savePrompt();
     $('done').textContent = 'Guardado';
     setTimeout(() => {
       window.close(); // en una pestaña abierta desde chrome://extensions puede no cerrarse: se deja el aviso
