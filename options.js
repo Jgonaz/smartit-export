@@ -81,6 +81,15 @@
     let st = await SieCarpeta.status(handle);
     if (st !== 'granted') st = await handle.requestPermission({ mode: 'readwrite' });
     await SieCarpeta.set(handle);
+    // Ruta para el agente: Chrome solo da el nombre de la carpeta, así que se rellena con él
+    // (si estaba vacía o era el nombre de la anterior) y se pide completarla.
+    const prevName = $('agent-path').dataset.autoName || '';
+    if (!$('agent-path').value.trim() || $('agent-path').value.trim() === prevName) {
+      $('agent-path').value = handle.name;
+      $('agent-path').dataset.autoName = handle.name;
+      chrome.storage.local.set({ agentPath: handle.name });
+      $('agent-hint').hidden = false;
+    }
     await render();
     if (st === 'granted') {
       if (!(await finishPending(handle))) msg('Carpeta guardada.', 'ok');

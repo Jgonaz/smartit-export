@@ -788,7 +788,7 @@
       if (ev.key !== 'Escape') return;
       const modalOpen = !$('modal').hidden;
       const popOpen = !pop.hidden;
-      const menuOpen = !$('settings-menu').hidden;
+      const menuOpen = !$('settings-menu').hidden || !$('opts-menu').hidden || !$('help').hidden;
       if (!modalOpen && !popOpen && !menuOpen) parent.postMessage({ sie: 'viewer-close' }, '*');
     }, true);
   }
@@ -821,9 +821,9 @@
     await navigator.clipboard.writeText(buildText());
     const b = $('copy');
     morphButton(b, $('copy-label'), '¡Copiado!', 'ok');
-    toast('Markdown copiado al portapapeles');
+    toast(attachments.length ? 'Markdown copiado al portapapeles (aviso: las imágenes no se copiarán)' : 'Markdown copiado al portapapeles', { ms: attachments.length ? 4500 : 2200 });
     clearTimeout(b._resetT);
-    b._resetT = setTimeout(() => morphButton(b, $('copy-label'), 'Copiar para el agente'), 1800);
+    b._resetT = setTimeout(() => morphButton(b, $('copy-label'), 'Copiar'), 1800);
   };
 
 
@@ -1265,10 +1265,47 @@
     chrome.storage.local.set({ style: stylePref });
   }));
 
-  const settingsBtn = $('settings-btn');
-  const settingsMenu = $('settings-menu');
-  const setMenu = open => { settingsMenu.hidden = !open; settingsBtn.setAttribute('aria-expanded', String(open)); };
-  settingsBtn.addEventListener('click', ev => { ev.stopPropagation(); setMenu(settingsMenu.hidden); });
-  document.addEventListener('click', ev => { if (!settingsMenu.hidden && !ev.target.closest('.settings')) setMenu(false); });
-  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !settingsMenu.hidden) setMenu(false); }, true);
+  // ---------- menú «Opciones»: Ayuda, Ajustes (panel al pasar el ratón) y Abrir carpeta ----------
+  const optsBtn = $('opts-btn'), optsMenu = $('opts-menu');
+  const settingsMenu = $('settings-menu'), settingsItem = $('opt-settings');
+  let settingsT;
+  const setSettings = open => {
+    clearTimeout(settingsT);
+    settingsMenu.hidden = !open;
+    settingsItem.setAttribute('aria-expanded', String(open));
+  };
+  const setOpts = open => {
+    optsMenu.hidden = !open;
+    optsBtn.setAttribute('aria-expanded', String(open));
+    if (!open) setSettings(false);
+  };
+  optsBtn.addEventListener('click', ev => { ev.stopPropagation(); setOpts(optsMenu.hidden); if (!optsMenu.hidden) $('opt-help').focus(); });
+  // Ajustes: se abre al pasar el ratón (y con clic o teclado); se cierra al salir con un pequeño margen.
+  const sub = settingsItem.parentElement;
+  sub.addEventListener('mouseenter', () => setSettings(true));
+  sub.addEventListener('mouseleave', () => { clearTimeout(settingsT); settingsT = setTimeout(() => setSettings(false), 250); });
+  settingsItem.addEventListener('click', ev => { ev.stopPropagation(); setSettings(settingsMenu.hidden); });
+  settingsItem.addEventListener('keydown', ev => {
+    if (ev.key === 'ArrowLeft' || ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setSettings(true); const f = settingsMenu.querySelector('button'); if (f) f.focus(); }
+  });
+  [$('opt-help'), settingsItem, $('opt-folder')].forEach(it => it.addEventListener('mouseenter', () => { if (it !== settingsItem) setSettings(false); }));
+  document.addEventListener('click', ev => { if (!optsMenu.hidden && !ev.target.closest('.opts')) setOpts(false); });
+  document.addEventListener('keydown', ev => {
+    if (ev.key !== 'Escape') return;
+    if (!settingsMenu.hidden) { setSettings(false); settingsItem.focus(); }
+    else if (!optsMenu.hidden) { setOpts(false); optsBtn.focus(); }
+  }, true);
+
+  // Ayuda
+  const help = $('help');
+  const openHelp = () => { setOpts(false); help.classList.remove('closing'); help.hidden = false; $('help-close').focus(); };
+  const closeHelp = () => {
+    if (help.hidden) return;
+    help.classList.add('closing');
+    setTimeout(() => { help.hidden = true; help.classList.remove('closing'); optsBtn.focus(); }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 170);
+  };
+  $('opt-help').addEventListener('click', openHelp);
+  $('help-close').addEventListener('click', closeHelp);
+  help.addEventListener('click', ev => { if (ev.target === help) closeHelp(); });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !help.hidden) { ev.stopPropagation(); closeHelp(); } }, true);
 })();

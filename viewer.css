@@ -71,7 +71,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .update-close { width: 26px; height: 26px; border-radius: 50%; border: 0; background: transparent; color: var(--grey); cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .update-close .ico { width: 14px; height: 14px; }
 .settings { position: relative; }
-.settings-menu { position: absolute; top: calc(100% + 10px); right: 0; z-index: 30; width: 290px; padding: 14px 16px 16px; --sh: var(--sky); animation: pop-in .18s cubic-bezier(.2,.7,.2,1); transform-origin: top right; }
+.settings-menu { position: absolute; top: -10px; right: calc(100% + 12px); z-index: 31; width: 290px; padding: 14px 16px 16px; --sh: var(--sky); animation: pop-in .18s cubic-bezier(.2,.7,.2,1); transform-origin: top right; }
 @keyframes pop-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
 .settings-title { font-family: var(--mono); font-weight: 700; margin-bottom: 12px; }
 .settings-label { font-size: 13px; color: var(--grey); margin-bottom: 8px; }
@@ -110,7 +110,7 @@ html[data-style="classic"] .btn-card.has-dot::after { background: #fff; box-shad
 .tag button { width: 18px; height: 18px; border: 0; border-radius: 50%; background: transparent; color: rgba(22, 22, 22, .6); cursor: pointer; font: 700 13px/1 system-ui, sans-serif; display: flex; align-items: center; justify-content: center; }
 .tag button:hover { background: rgba(22, 22, 22, .1); color: #161616; }
 html[data-theme="dark"] .tag { border-color: transparent; background: color-mix(in srgb, var(--tc, #fff) 80%, #fff); }
-.tag-input { height: 26px; width: 150px; padding: 0 10px; border: var(--bw) dashed var(--grey); border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; }
+.tag-input { height: 26px; field-sizing: content; min-width: 14ch; max-width: 260px; padding: 0 10px; border: var(--bw) dashed var(--grey); border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; }
 .tag-input:focus { outline: none; border-style: solid; border-color: var(--ink); background: var(--card); }
 html[data-style="classic"] .tag { border: 0; background: color-mix(in srgb, var(--tc) 50%, var(--card)); color: #2A2D35; font-weight: 500; }
 html[data-style="classic"][data-theme="dark"] .tag { background: color-mix(in srgb, var(--tc) 92%, #000); color: #14161B; }
@@ -309,6 +309,36 @@ html[data-style="classic"] .toast.err .toast-ico { background: var(--wait-bg); c
 .toast-action { flex: none; height: 30px; padding: 0 12px; border: var(--bw) solid var(--border); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; }
 html[data-style="classic"] .toast-action { border-width: 1px; border-color: var(--accent); background: var(--accent); color: #fff; }
 html[data-style="classic"] a.link-btn, html[data-style="classic"] .link-btn { color: var(--accent); text-decoration: none; }
+
+/* menú «Opciones» */
+.opts-menu { position: absolute; top: calc(100% + 10px); left: 0; z-index: 30; min-width: 200px; padding: 6px; --sh: var(--sky); animation: pop-in .18s cubic-bezier(.2,.7,.2,1); transform-origin: top left; display: flex; flex-direction: column; }
+.opt-item { display: flex; align-items: center; gap: 10px; width: 100%; height: 38px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-weight: 600; text-align: left; cursor: pointer; white-space: nowrap; }
+.opt-item:hover, .opt-item:focus-visible, .opt-item[aria-expanded="true"] { background: var(--hair); outline: none; }
+.opt-item .ico { width: 17px; height: 17px; color: var(--grey); }
+.opt-chev { margin-left: auto; }
+.opt-sub { position: relative; }
+/* puente invisible para que el ratón llegue al panel de ajustes sin cerrarlo */
+.opt-sub::after { content: ""; position: absolute; top: 0; right: 100%; width: 14px; height: 100%; }
+.btn-opts .ico { width: 17px; height: 17px; }
+html[data-style="classic"] .btn-opts { background: var(--card); color: var(--ink); border-color: var(--border); }
+html[data-style="classic"] .btn-opts:hover { background: var(--hair); border-color: var(--border); }
+html[data-style="classic"] .opts-menu { border-width: 1px; border-color: var(--border); box-shadow: 0 10px 30px rgba(20, 22, 27, .12); }
+
+/* ayuda */
+.help-modal { position: fixed; inset: 0; z-index: 55; background: rgba(10, 12, 18, .55); display: flex; align-items: flex-start; justify-content: center; padding: 6vh 20px; overflow-y: auto; animation: modal-bg .2s ease both; }
+.help-card { position: relative; width: min(720px, 100%); padding: 26px 30px 24px; --sh: var(--butter); animation: modal-in .28s cubic-bezier(.2,.8,.2,1) both; }
+.help-card .mono-h { font-size: 18px; margin-bottom: 10px; }
+.help-card p { margin: 0 0 12px; line-height: 1.55; }
+.help-tree { margin: 14px 0 16px; padding: 14px 16px; background: var(--hair); border-radius: 8px; font: 13px/1.6 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre; overflow-x: auto; }
+.help-list { margin: 0 0 14px; }
+.help-list dt { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-weight: 700; font-size: 13.5px; margin-top: 12px; }
+.help-list dd { margin: 3px 0 0; line-height: 1.5; color: var(--ink); }
+.help-list code, .help-card code { font: 12.5px ui-monospace, "Cascadia Mono", Consolas, monospace; background: var(--hair); border-radius: 4px; padding: 0 4px; }
+.help-close { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; color: var(--grey); font-size: 16px; cursor: pointer; }
+.help-close:hover { background: var(--hair); color: var(--ink); }
+.help-modal.closing { animation: modal-bg-out .17s ease both; }
+.help-modal.closing .help-card { animation: modal-out .17s ease both; }
+html[data-style="classic"] .help-card { border-width: 1px; border-color: var(--border); box-shadow: 0 20px 60px rgba(20, 22, 27, .18); }
 
 /* volver arriba: aparece cuando la ficha ya ha pasado por arriba */
 .to-top { position: fixed; z-index: 20; bottom: 32px; right: max(40px, calc((100vw - 1360px) / 2 + 40px)); width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border: var(--bw) solid var(--border); border-radius: 12px; background: var(--card); color: var(--ink); box-shadow: 4px 4px 0 var(--lilac); cursor: pointer; opacity: 0; transform: translateY(14px) scale(.9); pointer-events: none; transition: opacity .22s ease, transform .3s cubic-bezier(.2,.8,.2,1.2), box-shadow .12s ease; }

@@ -19,9 +19,9 @@ Actualmente, la actividad de SmartIT está paginada y no se puede copiar entera 
 
 Abre una incidencia y pulsa el icono 📋 de la cabecera de SmartIT, a la izquierda de la lupa. El contenido de SmartIT se funde a blanco mientras se analiza la incidencia y el visor aparece en su lugar, dentro de la propia página. Para volver a SmartIT, pulsa el icono de nuevo (ahora es una flecha circular) o Esc:
 
-- «Copiar para el agente»: copia toda la incidencia en Markdown. El selector Vista / Markdown muestra ese texto, y hay opciones para incluir o quitar los eventos automáticos (cambios de estado, asignaciones…) y los datos de la ficha.
+- «Copiar»: copia toda la incidencia en Markdown (las imágenes no se copian; para eso, «Guardar»). El selector Vista / Markdown muestra ese texto, y hay opciones para incluir o quitar los eventos automáticos (cambios de estado, asignaciones…) y los datos de la ficha.
 - Si la incidencia tiene un resumen de HelixGPT, se muestra completo al principio de la conversación y se incluye al principio del Markdown.
-- Engranaje de ajustes (arriba a la derecha del visor): tema claro, oscuro o el del sistema, y estilo «Tarjetas» o «Clásico».
+- «Opciones» (arriba a la derecha del visor): Ayuda (qué archivos se guardan y qué contiene cada uno) y Ajustes (tema claro, oscuro o del sistema, estilo «Tarjetas» o «Clásico» y carpeta para guardar).
 - Etiquetas: debajo del título puedes añadir etiquetas (con sugerencias de las que ya usas). Se guardan con la incidencia.
 - Relacionadas: en el lateral, las incidencias ya guardadas en tu carpeta que se parecen a la actual (etiquetas, servicio, categoría o título en común), con su causa y solución si están anotadas.
 - «Guardar»: guarda en la carpeta que elijas `<incidencia>/incidencia.md` y los adjuntos en `<incidencia>/adjuntos/`, enlazados desde el Markdown, y copia un prompt para pegarlo en tu agente (Copilot CLI u otro). En la raíz de esa carpeta mantiene un `indice.md` de todas las incidencias guardadas (etiquetas, servicio, equipo, solución), un vocabulario `etiquetas.md` y, en cada incidencia, un `clasificacion.md` con etiquetas, causa y solución. La primera vez se pide la carpeta; se puede cambiar en los ajustes de la extensión, donde también se indica la ruta tal como la ve el agente (por ejemplo, desde WSL) y se puede adaptar el prompt que se copia.
