@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Incidencias guardadas</title>
+  <link rel="stylesheet" href="viewer.css">
+  <link rel="stylesheet" href="explorar.css">
+  <script src="theme.js"></script>
+</head>
+<body class="ex">
+  <header class="wrap ex-top">
+    <div>
+      <div class="inc-num" id="ex-folder">Carpeta</div>
+      <h1>Incidencias guardadas</h1>
+      <p id="ex-lede" class="lede"></p>
+    </div>
+    <div class="ex-tools">
+      <input id="ex-search" class="ex-search" type="search" placeholder="Buscar por número, título, etiqueta, solución…" autocomplete="off" spellcheck="false" aria-label="Buscar">
+    </div>
+  </header>
+
+  <div id="ex-state" class="wrap ex-state" hidden>
+    <p id="ex-state-text"></p>
+    <button type="button" id="ex-grant" class="btn-card" hidden>Dar permiso</button>
+  </div>
+
+  <div id="ex-tags" class="wrap ex-tags" hidden></div>
+
+  <main id="ex-main" class="wrap ex-main" hidden>
+    <section class="ex-list-col">
+      <div class="ex-count muted" id="ex-count"></div>
+      <ol id="ex-list" class="ex-list"></ol>
+    </section>
+    <aside id="ex-detail" class="ex-detail card">
+      <p class="muted ex-empty">Elige una incidencia para ver su clasificación y su contenido.</p>
+    </aside>
+  </main>
+
+  <script src="carpeta.js"></script>
+  <script src="explorar.js"></script>
+</body>
+</html>

@@ -21,7 +21,7 @@ Abre una incidencia y pulsa el icono 📋 de la cabecera de SmartIT, a la izquie
 
 - «Copiar»: copia toda la incidencia en Markdown (las imágenes no se copian; para eso, «Guardar»). El selector Vista / Markdown muestra ese texto, y hay una opción para incluir o quitar los eventos automáticos (cambios de estado, asignaciones…).
 - Si la incidencia tiene un resumen de HelixGPT, se muestra completo al principio de la conversación y se incluye al principio del Markdown.
-- «Opciones» (arriba a la derecha del visor): Ayuda (qué archivos se guardan y qué contiene cada uno) y Ajustes (tema claro, oscuro o del sistema, estilo «Tarjetas» o «Clásico» y carpeta para guardar).
+- «Opciones» (arriba a la derecha del visor): Ayuda (qué archivos se guardan y qué contiene cada uno), Ajustes (tema, estilo «Tarjetas» o «Clásico» y carpeta) y Ver carpeta (las incidencias guardadas, con buscador y filtro por etiquetas; Chrome no permite abrir el explorador de archivos desde una extensión).
 - Etiquetas: debajo del título puedes añadir etiquetas (con sugerencias de las que ya usas). Se guardan con la incidencia.
 - Relacionadas: en el lateral, las incidencias ya guardadas en tu carpeta que se parecen a la actual (etiquetas, servicio, categoría o título en común), con su causa y solución si están anotadas.
 - «Guardar»: guarda en la carpeta que elijas `<incidencia>/incidencia.md` y los adjuntos en `<incidencia>/adjuntos/`, enlazados desde el Markdown, y copia un prompt para pegarlo en tu agente (Copilot CLI u otro). En la raíz de esa carpeta mantiene un `indice.md` de todas las incidencias guardadas (etiquetas, servicio, equipo, solución), un vocabulario `etiquetas.md` y, en cada incidencia, un `clasificacion.md` con etiquetas, causa y solución. La primera vez se pide la carpeta; se puede cambiar en los ajustes de la extensión, donde también se indica la ruta tal como la ve el agente (por ejemplo, desde WSL) y se puede adaptar el prompt que se copia.
@@ -36,6 +36,7 @@ Abre una incidencia y pulsa el icono 📋 de la cabecera de SmartIT, a la izquie
 | `content.js` | En la ficha (Helix Progressive Views) lee los campos, recorre las páginas de la actividad y carga los adjuntos. |
 | `main-hook.js` | Observa (sin modificarlas) las peticiones que hace la propia aplicación para reutilizar su cabecera de sesión al pedir los adjuntos. |
 | `background.js` | Guarda la exportación, abre el visor y pasa los archivos a guardar a `offscreen.html`. |
+| `explorar.html` / `explorar.js` / `explorar.css` | «Ver carpeta»: lista y muestra las incidencias guardadas. |
 | `options.html` / `options.js` | Ajustes de la extensión: carpeta donde guardar y ruta para el agente. |
 | `carpeta.js` / `offscreen.html` | Escriben en la carpeta elegida (API de acceso a archivos de Chrome). |
 | `viewer.html` / `viewer.js` / `viewer.css` | El visor local. |

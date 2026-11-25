@@ -38,33 +38,13 @@
               <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><path d="M12 17v.5"/></svg>
               Ayuda
             </button>
-            <div class="opt-sub">
-              <button type="button" role="menuitem" id="opt-settings" class="opt-item" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-menu">
-                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
-                Ajustes
-                <svg class="ico opt-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
-              </button>
-          <div id="settings-menu" class="settings-menu card" role="dialog" aria-label="Ajustes" hidden>
-              <div class="settings-title">Ajustes</div>
-              <div class="settings-label" id="theme-label">Tema</div>
-              <div class="seg" role="group" aria-labelledby="theme-label">
-                <button type="button" data-theme-pref="light" aria-pressed="false">Claro</button>
-                <button type="button" data-theme-pref="dark" aria-pressed="false">Oscuro</button>
-                <button type="button" data-theme-pref="system" aria-pressed="false">Sistema</button>
-              </div>
-              <div class="settings-label settings-gap" id="style-label">Estilo</div>
-              <div class="seg" role="group" aria-labelledby="style-label">
-                <button type="button" data-style-pref="cards" aria-pressed="false">Tarjetas</button>
-                <button type="button" data-style-pref="classic" aria-pressed="false">Clásico</button>
-              </div>
-              <div class="settings-label settings-gap">Carpeta para guardar</div>
-              <div class="settings-folder"><span id="settings-folder">Sin elegir</span> <button type="button" id="settings-folder-btn" class="link-btn">Configurar…</button></div>
-              <div class="settings-note">Se recuerda en este navegador.</div>
-            </div>
-            </div>
+            <button type="button" role="menuitem" id="opt-settings" class="opt-item" aria-haspopup="dialog">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+              Ajustes
+            </button>
             <button type="button" role="menuitem" id="opt-folder" class="opt-item" hidden>
               <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-              Abrir carpeta
+              Ver carpeta
             </button>
           </div>
         </div>
@@ -154,6 +134,37 @@
   <button type="button" id="to-top" class="to-top" aria-label="Volver arriba" title="Volver arriba" hidden>
     <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>
   </button>
+
+  <div id="settings-modal" class="help-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+    <div class="help-card card set-card">
+      <button type="button" id="settings-close" class="help-close" aria-label="Cerrar">✕</button>
+      <h2 id="settings-title" class="mono-h">Ajustes</h2>
+      <div id="settings-menu" class="set-body">
+        <div class="set-row">
+          <div class="settings-label" id="theme-label">Tema</div>
+          <div class="seg" role="group" aria-labelledby="theme-label">
+            <button type="button" data-theme-pref="light" aria-pressed="false">Claro</button>
+            <button type="button" data-theme-pref="dark" aria-pressed="false">Oscuro</button>
+            <button type="button" data-theme-pref="system" aria-pressed="false">Sistema</button>
+          </div>
+        </div>
+        <div class="set-row">
+          <div class="settings-label" id="style-label">Estilo</div>
+          <div class="seg" role="group" aria-labelledby="style-label">
+            <button type="button" data-style-pref="cards" aria-pressed="false">Tarjetas</button>
+            <button type="button" data-style-pref="classic" aria-pressed="false">Clásico</button>
+          </div>
+        </div>
+        <div class="set-row">
+          <div class="settings-label">Carpeta para guardar</div>
+          <div class="settings-folder"><span id="settings-folder">Sin elegir</span></div>
+        </div>
+        <p class="muted set-note">La carpeta, la ruta y el prompt para el agente y las actualizaciones están en los ajustes de la extensión.</p>
+        <div class="set-actions"><button type="button" id="settings-folder-btn" class="btn-card">Más ajustes…</button></div>
+      </div>
+      <p class="muted set-foot">Se recuerdan en este navegador.</p>
+    </div>
+  </div>
 
   <div id="help" class="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
     <div class="help-card card">

@@ -126,6 +126,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       .then(sendResponse, () => sendResponse({ ok: false }));
     return true;
   }
+  if (msg.type === 'open-folder-view') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('explorar.html') }).then(() => sendResponse({ ok: true }), () => sendResponse({ ok: false }));
+    return true;
+  }
   if (msg.type === 'folder-status') {
     ensureOffscreen().then(() => chrome.runtime.sendMessage({ target: 'offscreen', type: 'status' }))
       .then(sendResponse, () => sendResponse({ name: '', status: 'none' }));

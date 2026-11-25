@@ -291,5 +291,5 @@ const SieCarpeta = (() => {
     return text.replace(/ – \./g, '.').replace(/[ \t]+\n/g, '\n').trim();
   }
 
-  return { get, set, clear, status, write, safe, prompt, DEFAULT_PROMPT, tagsInfo, related, normTag, FM };
+  return { get, set, clear, status, write, safe, prompt, DEFAULT_PROMPT, tagsInfo, related, rebuildIndex, readText, normTag, FM };
 })();

@@ -316,13 +316,23 @@ html[data-style="classic"] a.link-btn, html[data-style="classic"] .link-btn { co
 .opt-item:hover, .opt-item:focus-visible, .opt-item[aria-expanded="true"] { background: var(--hair); outline: none; }
 .opt-item .ico { width: 17px; height: 17px; color: var(--grey); }
 .opt-chev { margin-left: auto; }
-.opt-sub { position: relative; }
-/* puente invisible para que el ratón llegue al panel de ajustes sin cerrarlo */
-.opt-sub::after { content: ""; position: absolute; top: 0; right: 100%; width: 14px; height: 100%; }
 .btn-opts .ico { width: 17px; height: 17px; }
 html[data-style="classic"] .btn-opts { background: var(--card); color: var(--ink); border-color: var(--border); }
 html[data-style="classic"] .btn-opts:hover { background: var(--hair); border-color: var(--border); }
 html[data-style="classic"] .opts-menu { border-width: 1px; border-color: var(--border); box-shadow: 0 10px 30px rgba(20, 22, 27, .12); }
+
+/* ajustes (modal) */
+.help-card.set-card { width: min(460px, 100%); --sh: var(--sky); }
+.set-body { display: flex; flex-direction: column; gap: 18px; margin-top: 8px; }
+.set-row .settings-label { margin-bottom: 8px; }
+.set-row .seg { display: flex; }
+.set-row .seg button { flex: 1; height: 36px; }
+.set-row .settings-folder { font-size: 15px; }
+.set-note { margin: -4px 0 0; font-size: 13px; line-height: 1.5; }
+.set-actions .btn-card { height: 38px; }
+.set-foot { margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--hair); font-size: 12.5px; }
+.help-modal { align-items: flex-start; }
+.help-card.set-card { margin-top: 8vh; }
 
 /* ayuda */
 .help-modal { position: fixed; inset: 0; z-index: 55; background: rgba(10, 12, 18, .55); display: flex; align-items: flex-start; justify-content: center; padding: 6vh 20px; overflow-y: auto; animation: modal-bg .2s ease both; }

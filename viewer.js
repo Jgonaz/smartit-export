@@ -788,7 +788,7 @@
       if (ev.key !== 'Escape') return;
       const modalOpen = !$('modal').hidden;
       const popOpen = !pop.hidden;
-      const menuOpen = !$('settings-menu').hidden || !$('opts-menu').hidden || !$('help').hidden;
+      const menuOpen = !$('opts-menu').hidden || !$('help').hidden || !$('settings-modal').hidden;
       if (!modalOpen && !popOpen && !menuOpen) parent.postMessage({ sie: 'viewer-close' }, '*');
     }, true);
   }
@@ -1205,6 +1205,7 @@
     try {
       const r = await chrome.runtime.sendMessage({ type: 'folder-status' });
       $('settings-folder').textContent = !r || !r.name ? 'Sin elegir' : r.name + (r.status === 'granted' ? '' : ' (sin permiso)');
+      $('opt-folder').hidden = !(r && r.name); // «Ver carpeta» solo si hay una elegida
     } catch (_) { $('settings-folder').textContent = 'Sin elegir'; }
   }
   refreshFolder();
@@ -1265,47 +1266,37 @@
     chrome.storage.local.set({ style: stylePref });
   }));
 
-  // ---------- menú «Opciones»: Ayuda, Ajustes (panel al pasar el ratón) y Abrir carpeta ----------
+  // ---------- menú «Opciones»: Ayuda, Ajustes y Ver carpeta ----------
   const optsBtn = $('opts-btn'), optsMenu = $('opts-menu');
-  const settingsMenu = $('settings-menu'), settingsItem = $('opt-settings');
-  let settingsT;
-  const setSettings = open => {
-    clearTimeout(settingsT);
-    settingsMenu.hidden = !open;
-    settingsItem.setAttribute('aria-expanded', String(open));
-  };
-  const setOpts = open => {
-    optsMenu.hidden = !open;
-    optsBtn.setAttribute('aria-expanded', String(open));
-    if (!open) setSettings(false);
-  };
+  const setOpts = open => { optsMenu.hidden = !open; optsBtn.setAttribute('aria-expanded', String(open)); };
   optsBtn.addEventListener('click', ev => { ev.stopPropagation(); setOpts(optsMenu.hidden); if (!optsMenu.hidden) $('opt-help').focus(); });
-  // Ajustes: se abre al pasar el ratón (y con clic o teclado); se cierra al salir con un pequeño margen.
-  const sub = settingsItem.parentElement;
-  sub.addEventListener('mouseenter', () => setSettings(true));
-  sub.addEventListener('mouseleave', () => { clearTimeout(settingsT); settingsT = setTimeout(() => setSettings(false), 250); });
-  settingsItem.addEventListener('click', ev => { ev.stopPropagation(); setSettings(settingsMenu.hidden); });
-  settingsItem.addEventListener('keydown', ev => {
-    if (ev.key === 'ArrowLeft' || ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setSettings(true); const f = settingsMenu.querySelector('button'); if (f) f.focus(); }
-  });
-  [$('opt-help'), settingsItem, $('opt-folder')].forEach(it => it.addEventListener('mouseenter', () => { if (it !== settingsItem) setSettings(false); }));
   document.addEventListener('click', ev => { if (!optsMenu.hidden && !ev.target.closest('.opts')) setOpts(false); });
+  optsMenu.addEventListener('keydown', ev => {
+    const items = [...optsMenu.querySelectorAll('.opt-item:not([hidden])')];
+    const i = items.indexOf(document.activeElement);
+    if (ev.key === 'ArrowDown') { ev.preventDefault(); items[(i + 1) % items.length].focus(); }
+    if (ev.key === 'ArrowUp') { ev.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+  });
+
+  // Ventanas modales (Ayuda y Ajustes): misma animación de entrada y salida.
+  const modals = { help: $('help'), settings: $('settings-modal') };
+  const openModalBox = m => { setOpts(false); m.classList.remove('closing'); m.hidden = false; m.querySelector('.help-close').focus(); };
+  const closeModalBox = m => {
+    if (m.hidden) return;
+    m.classList.add('closing');
+    setTimeout(() => { m.hidden = true; m.classList.remove('closing'); optsBtn.focus(); }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 170);
+  };
+  Object.values(modals).forEach(m => {
+    m.querySelector('.help-close').addEventListener('click', () => closeModalBox(m));
+    m.addEventListener('click', ev => { if (ev.target === m) closeModalBox(m); });
+  });
+  $('opt-help').addEventListener('click', () => openModalBox(modals.help));
+  $('opt-settings').addEventListener('click', () => openModalBox(modals.settings));
+  $('opt-folder').addEventListener('click', () => { setOpts(false); chrome.runtime.sendMessage({ type: 'open-folder-view' }); });
   document.addEventListener('keydown', ev => {
     if (ev.key !== 'Escape') return;
-    if (!settingsMenu.hidden) { setSettings(false); settingsItem.focus(); }
+    const open = Object.values(modals).find(m => !m.hidden);
+    if (open) { ev.stopPropagation(); closeModalBox(open); }
     else if (!optsMenu.hidden) { setOpts(false); optsBtn.focus(); }
   }, true);
-
-  // Ayuda
-  const help = $('help');
-  const openHelp = () => { setOpts(false); help.classList.remove('closing'); help.hidden = false; $('help-close').focus(); };
-  const closeHelp = () => {
-    if (help.hidden) return;
-    help.classList.add('closing');
-    setTimeout(() => { help.hidden = true; help.classList.remove('closing'); optsBtn.focus(); }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 170);
-  };
-  $('opt-help').addEventListener('click', openHelp);
-  $('help-close').addEventListener('click', closeHelp);
-  help.addEventListener('click', ev => { if (ev.target === help) closeHelp(); });
-  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !help.hidden) { ev.stopPropagation(); closeHelp(); } }, true);
 })();

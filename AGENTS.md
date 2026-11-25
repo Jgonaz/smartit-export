@@ -23,6 +23,7 @@ Guía para agentes (y personas) que retomen este repositorio. Recoge lo que se a
 | `background.js` | Service worker | Guarda cada exportación en `chrome.storage.local` con una clave aleatoria (`exp_<fecha>_<uuid>`), conserva las 10 más recientes y comprueba si hay versión nueva. |
 | `viewer.html/.js/.css`, `theme.js` | Página de la extensión | El visor. `theme.js` aplica tema y estilo antes de pintar para evitar parpadeos. |
 | `options.html/.js/.css` | Página de opciones de la extensión | Elegir la carpeta donde guardar, volver a dar permiso y la ruta para el agente. |
+| `explorar.html/.js/.css` | Pestaña de la extensión | «Ver carpeta»: lee el índice de la carpeta elegida (o lo crea) y muestra cada incidencia: clasificación, otros archivos, adjuntos e `incidencia.md` renderizado. Chrome no deja abrir el explorador de archivos desde una extensión. |
 | `carpeta.js`, `offscreen.html/.js` | Opciones y documento oculto | Guardan la referencia a la carpeta en IndexedDB y escriben los archivos. |
 
 ### Mensajes entre marcos (`postMessage`, campo `sie`)
@@ -34,7 +35,7 @@ Guía para agentes (y personas) que retomen este repositorio. Recoge lo que se a
 
 ### Visor incrustado
 
-El visor se carga en un iframe con `chrome.runtime.getURL('viewer.html')#<id>`. Para ello `viewer.html/js/css`, `theme.js` y `fonts/*` están en `web_accessible_resources` (solo para `https://*.onbmc.com/*`). El iframe lleva `allow="clipboard-write"` para que funcione "Copiar para el agente". SmartIT no puede leer el contenido del iframe porque es de otro origen. No se usa `use_dynamic_url` por compatibilidad. Al cerrar, el visor se guarda en caché para reabrirlo al instante si no cambia la incidencia.
+El visor se carga en un iframe con `chrome.runtime.getURL('viewer.html')#<id>`. Para ello `viewer.html/js/css`, `theme.js` y `fonts/*` están en `web_accessible_resources` (solo para `https://*.onbmc.com/*`). El iframe lleva `allow="clipboard-write"` para que funcione «Copiar». SmartIT no puede leer el contenido del iframe porque es de otro origen. No se usa `use_dynamic_url` por compatibilidad. Al cerrar, el visor se guarda en caché para reabrirlo al instante si no cambia la incidencia.
 
 ## SmartIT por dentro (Helix Progressive Views)
 
@@ -80,7 +81,8 @@ Si la respuesta es HTML o JSON cuando no debería, se trata como error y el viso
   - Los cambios de grupo son píldoras, los estados son líneas grises y los huecos de más de 2 h se muestran como "X sin actividad".
 - **Tiempo:** el total va desde la creación hasta ahora, o hasta el último cierre si está cerrada. "Sin actividad" es la suma de huecos de más de 2 h entre entradas; las asignaciones automáticas también cuentan como actividad.
 - **Menciones a adjuntos:** el texto que nombra un adjunto se convierte en una etiqueta que abre la imagen. El nombre completo siempre vale. El nombre sin extensión solo vale si parece un nombre de archivo (`image002`, `IMG_1234`, `captura-login`…), nunca si es una palabra suelta ("correo") o un número (que puede ser un dato del cliente).
-- **Markdown para el agente:** `buildText()` genera el Markdown de "Copiar para el agente" y el `incidencia.md` que se guarda.
+- **Markdown para el agente:** `buildText()` genera el Markdown de «Copiar» y el `incidencia.md` que se guarda.
+- **Menú «Opciones»:** Ayuda y Ajustes son ventanas modales; «Ver carpeta» solo aparece si hay carpeta elegida y abre `explorar.html` en una pestaña.
 
 ### Guardar en una carpeta
 
