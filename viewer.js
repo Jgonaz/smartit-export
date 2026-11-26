@@ -458,7 +458,7 @@
   const teamColor = g => `var(--t${Math.max(0, teamKeys.indexOf((g || '').toLowerCase())) % 8})`;
   const stepAt = ts => { let s = null; for (const st of teamSteps) { if (toTs(st.date) <= ts) s = st; else break; } return s; };
 
-  // ---------- cabecera: estado y siguiente SLA ----------
+  // ---------- estado (junto al número) y siguiente SLA (arriba de la tarjeta Tiempo) ----------
   (() => {
     const st = (h.status || '').trim();
     const chip = $('status-chip');
@@ -469,7 +469,7 @@
       chip.hidden = false;
     }
     const slaTs = toTs(h.sla);
-    const sla = $('sla-chip');
+    const block = $('sla-block');
     if (!slaTs || closedNow) return;
     const paused = /pendiente/i.test(st);
     const DAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
@@ -488,25 +488,30 @@
       if (hh) return `${hh} h${mm ? ` ${mm} min` : ''}`;
       return `${mm} min`;
     };
-    const total = slaTs - (toTs(h.created) || 0);
+    const createdTs = toTs(h.created);
+    const total = createdTs ? slaTs - createdTs : 0;
+    const m = (h.created || '').match(/(\d{1,2})\/(\d{1,2})\/\d{4}\s+(\d{1,2}):(\d{2})/);
+    $('sla-from').textContent = m ? `Abierta ${m[1]}/${m[2]} ${m[3]}:${m[4]}` : '';
+    $('sla-when').title = `Siguiente SLA: ${h.sla}`;
     const paint = () => {
-      const left = slaTs - Date.now();
+      const now = Date.now(), left = slaTs - now;
+      const frac = total > 0 ? left / total : null;
       let state, text;
-      if (paused) { state = 'pausa'; text = 'SLA en pausa'; }
-      else if (left <= 0) { state = 'vencido'; text = `SLA vencido hace ${span(-left)}`; }
+      if (paused) { state = 'pausa'; text = 'en pausa'; }
+      else if (left <= 0) { state = 'vencido'; text = `vencido hace ${span(-left)}`; }
       else {
-        const frac = total > 0 && toTs(h.created) ? left / total : null;
         state = left < HOUR || (frac !== null && frac < 0.15) ? 'urgente'
           : (frac !== null ? frac < 0.5 : left < 8 * HOUR) ? 'proximo' : 'plazo';
-        text = `SLA en ${span(left)}`;
+        text = `en ${span(left)}`;
       }
-      sla.dataset.sla = state;
-      sla.replaceChildren(document.createTextNode(text + ' '),
-        Object.assign(document.createElement('span'), { className: 'sla-date', textContent: `· ${when(slaTs)}` }));
+      block.dataset.sla = state;
+      $('sla-left').textContent = text;
+      $('sla-when').textContent = when(slaTs);
+      const used = frac === null ? (left <= 0 ? 1 : 0) : Math.min(1, Math.max(0, 1 - frac));
+      $('sla-fill').style.setProperty('--p', `${Math.round(used * 100)}%`);
     };
-    sla.title = `Siguiente SLA: ${h.sla}`;
     paint();
-    sla.hidden = false;
+    block.hidden = false;
     if (!paused) setInterval(paint, 60000);
   })();
 

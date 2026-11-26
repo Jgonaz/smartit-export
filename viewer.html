@@ -12,7 +12,6 @@
       <div class="num-row">
         <div id="number" class="inc-num"></div>
         <span id="status-chip" class="hchip status-chip" hidden></span>
-        <span id="sla-chip" class="hchip sla-chip" hidden></span>
       </div>
       <h1 id="title">Cargando…</h1>
       <p id="lede" class="lede"></p>
@@ -95,6 +94,12 @@
 
     <aside class="rail">
       <section id="time-card" class="card time-card">
+        <div id="sla-block" class="sla-block" hidden>
+          <div class="sla-head"><h2 class="mono-h">Siguiente SLA</h2><span id="sla-when" class="sla-when"></span></div>
+          <div id="sla-left" class="sla-left"></div>
+          <div class="sla-track" aria-hidden="true"><span id="sla-fill"></span></div>
+          <div class="sla-ends"><span id="sla-from"></span><span>Vence</span></div>
+        </div>
         <h2 class="mono-h">Tiempo</h2>
         <div id="time-total" class="big-num"></div>
         <div id="time-note" class="muted small-p"></div>
