@@ -336,6 +336,9 @@ html[data-style="classic"] .toast.err .toast-ico { background: var(--wait-bg); c
 @keyframes toast-out { to { opacity: 0; transform: translateX(16px); } }
 
 .toast.err { box-shadow: 4px 4px 0 var(--salmon); }
+.toast-close { flex: none; align-self: flex-start; width: 24px; height: 24px; margin: -4px -8px 0 -4px; padding: 0; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--grey); opacity: .55; cursor: pointer; transition: opacity .15s ease, background-color .15s ease; }
+.toast-close:hover, .toast-close:focus-visible { opacity: 1; background: var(--hair); }
+.toast-close .ico { width: 14px; height: 14px; stroke-width: 2.2; }
 .toast-action { flex: none; height: 30px; padding: 0 12px; border: var(--bw) solid var(--border); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; }
 html[data-style="classic"] .toast-action { border-width: 1px; border-color: var(--accent); background: var(--accent); color: #fff; }
 html[data-style="classic"] a.link-btn, html[data-style="classic"] .link-btn { color: var(--accent); text-decoration: none; }

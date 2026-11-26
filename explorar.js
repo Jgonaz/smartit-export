@@ -53,8 +53,16 @@
     $('ex-toast-ico').setAttribute('d', error ? 'M12 7v6M12 17v.5' : 'M5 12.5l4.5 4.5L19 7.5');
     t.classList.remove('out'); t.hidden = false;
     clearTimeout(toastT);
-    toastT = setTimeout(() => { t.classList.add('out'); setTimeout(() => { t.hidden = true; }, 220); }, error ? 5000 : 2600);
+    toastT = setTimeout(hideToast, error ? 5000 : 2600);
   }
+  function hideToast() {
+    const t = $('ex-toast');
+    clearTimeout(toastT);
+    if (t.hidden || t.classList.contains('out')) return;
+    t.classList.add('out');
+    toastT = setTimeout(() => { t.hidden = true; t.classList.remove('out'); }, 220);
+  }
+  $('ex-toast-close').addEventListener('click', hideToast);
 
   // ---------- estados sin lista (sin carpeta, sin permiso, vacía) ----------
   const showState = (title, text, btn, onBtn) => {
@@ -328,7 +336,7 @@
       const setMenu = open => { menu.hidden = !open; copyBtn.setAttribute('aria-expanded', String(open)); };
       menu.append(item('Documentar', 'Ya está finalizada: dejarla bien documentada', '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>', true),
         item('Investigar', 'Analizarla y buscar incidencias parecidas', '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', false));
-      copyBtn.addEventListener('click', ev => { ev.stopPropagation(); setMenu(menu.hidden); if (!menu.hidden) menu.querySelector('.opt-item').focus(); });
+      copyBtn.addEventListener('click', ev => { ev.stopPropagation(); setMenu(menu.hidden); if (!menu.hidden) { hideToast(); menu.querySelector('.opt-item').focus(); } });
       menu.addEventListener('keydown', ev => {
         const items = [...menu.querySelectorAll('.opt-item')], i = items.indexOf(document.activeElement);
         if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); items[(i + (ev.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); }

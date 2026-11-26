@@ -939,7 +939,12 @@
     $('copy-inv').title = saved ? 'Copia un prompt con la ruta de la incidencia guardada' : 'Copia la incidencia en Markdown (sin imágenes)';
   }
   copyBtn.addEventListener('click', ev => {
-    if (closedNow) { ev.stopPropagation(); setCopyMenu(copyMenu.hidden); if (!copyMenu.hidden) $('copy-doc').focus(); return; }
+    if (closedNow) {
+      ev.stopPropagation();
+      setCopyMenu(copyMenu.hidden);
+      if (!copyMenu.hidden) { hideToast(); $('copy-doc').focus(); } // el aviso taparía el menú
+      return;
+    }
     copyInvestigate();
   });
   $('copy-doc').addEventListener('click', () => { setCopyMenu(false); copyDoc(); });
@@ -1208,11 +1213,17 @@
     clearTimeout(toastTimer);
     // Se vuelve a lanzar la animación de entrada en cada aviso.
     t.classList.remove('out'); t.hidden = true; void t.offsetWidth; t.hidden = false;
-    toastTimer = setTimeout(() => {
-      t.classList.add('out');
-      toastTimer = setTimeout(() => { t.hidden = true; t.classList.remove('out'); }, 220);
-    }, action ? Math.max(ms, 9000) : ms);
+    toastTimer = setTimeout(hideToast, action ? Math.max(ms, 9000) : ms);
   }
+  // Oculta el aviso que se esté mostrando (con su animación de salida).
+  function hideToast() {
+    const t = $('toast');
+    clearTimeout(toastTimer);
+    if (t.hidden || t.classList.contains('out')) return;
+    t.classList.add('out');
+    toastTimer = setTimeout(() => { t.hidden = true; t.classList.remove('out'); }, 220);
+  }
+  $('toast-close').addEventListener('click', hideToast);
 
   const PASTE = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘V' : 'Ctrl+V';
   // Tras guardar, las etiquetas del visor ya son las de la carpeta (incluidas las que añadió el agente).
