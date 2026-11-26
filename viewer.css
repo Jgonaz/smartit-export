@@ -369,6 +369,24 @@ html[data-style="classic"] .opts-menu { border-width: 1px; border-color: var(--b
 .help-card { position: relative; width: min(720px, 100%); padding: 26px 30px 24px; --sh: var(--butter); animation: modal-in .28s cubic-bezier(.2,.8,.2,1) both; }
 .help-card .mono-h { font-size: 18px; margin-bottom: 10px; }
 .help-card p { margin: 0 0 12px; line-height: 1.55; }
+.help-intro { color: var(--grey); }
+.help-sec { border-top: 1px solid var(--hair); }
+.help-sec:last-of-type { border-bottom: 1px solid var(--hair); }
+.help-sec summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 2px; font-weight: 700; cursor: pointer; list-style: none; border-radius: 6px; }
+.help-sec summary::-webkit-details-marker { display: none; }
+.help-sec summary::after { content: ""; flex: none; width: 8px; height: 8px; border-right: 2px solid var(--grey); border-bottom: 2px solid var(--grey); transform: rotate(45deg) translate(-2px, -2px); transition: transform .2s ease; }
+.help-sec[open] summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.help-sec summary:hover { color: var(--ink); background: var(--hair); }
+.help-sec summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.help-body { padding: 0 2px 16px; animation: tag-in .2s ease; }
+.help-body > :first-child { margin-top: 0; }
+.help-ul { margin: 0 0 12px; padding-left: 20px; line-height: 1.55; }
+.help-ul li + li { margin-top: 5px; }
+.help-table { border-collapse: collapse; margin: 0 0 14px; font-size: 14px; min-width: 60%; }
+.help-table td { padding: 6px 12px 6px 0; border-bottom: 1px solid var(--hair); }
+.help-table td:last-child { font-family: var(--mono); font-weight: 700; text-align: right; padding-right: 0; }
+.help-sla { list-style: none; padding-left: 0; }
+.help-sla .sw { display: inline-block; width: 12px; height: 12px; margin-right: 8px; border-radius: 50%; background: var(--c); border: 1px solid var(--border); vertical-align: -1px; }
 .help-tree { margin: 14px 0 16px; padding: 14px 16px; background: var(--hair); border-radius: 8px; font: 13px/1.6 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre; overflow-x: auto; }
 .help-list { margin: 0 0 14px; }
 .help-list dt { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-weight: 700; font-size: 13.5px; margin-top: 12px; }

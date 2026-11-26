@@ -178,9 +178,14 @@
   <div id="help" class="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
     <div class="help-card card">
       <button type="button" id="help-close" class="help-close" aria-label="Cerrar">✕</button>
-      <h2 id="help-title" class="mono-h">Cómo se guardan las incidencias</h2>
-      <p>Al pulsar <strong>Guardar</strong>, la incidencia se escribe en la carpeta que elegiste (se cambia en <em>Opciones → Ajustes → Carpeta para guardar</em>). No se envía nada a ningún servidor: todo queda en tu equipo.</p>
-      <pre class="help-tree">carpeta elegida/
+      <h2 id="help-title" class="mono-h">Ayuda</h2>
+      <p class="help-intro">Todo queda en tu equipo, en la carpeta que elegiste: no se envía nada a ningún servidor. Abre el apartado que te interese.</p>
+
+      <details class="help-sec" name="help">
+        <summary>Qué se guarda y dónde</summary>
+        <div class="help-body">
+          <p>Al pulsar <strong>Guardar</strong>, la incidencia se escribe en tu carpeta (se cambia en <em>Opciones → Ajustes → Más ajustes…</em>):</p>
+          <pre class="help-tree">carpeta elegida/
   indice.md          una fila por incidencia guardada
   indice.jsonl       lo mismo, una línea JSON por incidencia
   etiquetas.md       vocabulario de etiquetas
@@ -188,21 +193,95 @@
     incidencia.md    la incidencia completa
     adjuntos/        imágenes y archivos
     clasificacion.md etiquetas, causa y solución</pre>
-      <dl class="help-list">
-        <dt>incidencia.md</dt>
-        <dd>Empieza con un bloque de datos (número, título, estado, servicio, categorías, equipos, fechas, etiquetas) y sigue con la ficha, la descripción y toda la actividad en Markdown. <strong>Se reescribe</strong> cada vez que vuelves a guardar la incidencia.</dd>
-        <dt>adjuntos/</dt>
-        <dd>Las imágenes y archivos de la incidencia, enlazados desde <code>incidencia.md</code>. <strong>Se rehace</strong> al volver a guardar para que coincida con la incidencia actual.</dd>
-        <dt>clasificacion.md</dt>
-        <dd>Las etiquetas, la causa, la solución y notas libres. Lo mantenéis tú y tu agente: al volver a guardar <strong>solo se actualizan las etiquetas</strong>; el resto se conserva. Si el equipo documenta las incidencias en otra herramienta, aquí puede anotarse <code>documentacion</code> (pendiente, no-necesaria o documentada), <code>documentacion_url</code> y <code>documentacion_fecha</code>, y el visor lo muestra bajo los botones.</dd>
-        <dt>indice.md e indice.jsonl</dt>
-        <dd>Resumen de todas las incidencias de la carpeta (título, servicio, equipo, etiquetas, solución…). <strong>Se regeneran</strong> en cada guardado leyendo las carpetas, así que siempre están completos. Con ellos se calculan las <em>Relacionadas</em>.</dd>
-        <dt>etiquetas.md</dt>
-        <dd>El vocabulario: cada etiqueta con su significado. Las nuevas se añaden en «Sin describir»; lo que escribas se conserva.</dd>
-        <dt>Otros archivos</dt>
-        <dd>Cualquier otro archivo que tú o tu agente dejéis en la carpeta de una incidencia (notas, diagnóstico…) <strong>no se toca</strong>.</dd>
-      </dl>
-      <p class="muted">Al guardar se copia un prompt para tu agente con las rutas de la incidencia; se adapta en <em>Opciones → Ajustes → Configurar…</em>.</p>
+          <dl class="help-list">
+            <dt>incidencia.md</dt>
+            <dd>Empieza con un bloque de datos (número, título, estado, servicio, categorías, equipos, fechas, siguiente SLA, etiquetas) y sigue con la ficha, la descripción y toda la actividad en Markdown.</dd>
+            <dt>adjuntos/</dt>
+            <dd>Las imágenes y archivos de la incidencia, enlazados desde <code>incidencia.md</code>.</dd>
+            <dt>clasificacion.md</dt>
+            <dd>Etiquetas, causa, solución y notas libres. Si el equipo documenta las incidencias en otra herramienta, puede anotarse <code>documentacion</code> (pendiente, no-necesaria o documentada), <code>documentacion_url</code> y <code>documentacion_fecha</code>; el visor lo muestra bajo los botones.</dd>
+            <dt>etiquetas.md</dt>
+            <dd>El vocabulario: cada etiqueta con su significado. Las nuevas se añaden en «Sin describir».</dd>
+          </dl>
+        </div>
+      </details>
+
+      <details class="help-sec" name="help">
+        <summary>Qué pasa al volver a guardar</summary>
+        <div class="help-body">
+          <ul class="help-ul">
+            <li><code>incidencia.md</code> <strong>se reescribe</strong> con lo que haya ahora en SmartIT.</li>
+            <li><code>adjuntos/</code> <strong>se rehace</strong> para que coincida con la incidencia actual.</li>
+            <li><code>clasificacion.md</code>: <strong>solo se actualizan las etiquetas</strong>; causa, solución, notas y lo que añada tu agente se conservan.</li>
+            <li>Cualquier otro archivo que tú o tu agente dejéis en la carpeta de la incidencia (diagnóstico, notas…) <strong>no se toca</strong>.</li>
+            <li>El índice se regenera leyendo todas las carpetas, así que siempre está completo, aunque guardéis varias personas en una carpeta compartida.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="help-sec" name="help">
+        <summary>Por qué hay un indice.md y un indice.jsonl</summary>
+        <div class="help-body">
+          <p>Tienen lo mismo (número, título, estado, servicio, categoría, equipo, etiquetas, causa, solución, documentación y fechas), en dos formatos para dos lectores:</p>
+          <ul class="help-ul">
+            <li><code>indice.md</code> es una tabla para leerla tú en un editor u Obsidian, o para que el agente la recorra de un vistazo. Cada número enlaza a su <code>incidencia.md</code>.</li>
+            <li><code>indice.jsonl</code> es para programas: una línea JSON por incidencia, sin problemas con barras verticales, saltos de línea o listas. Es el que leen la extensión (Relacionadas, Ver guardadas) y los agentes cuando necesitan filtrar o actualizar una fila sin romper la tabla.</li>
+          </ul>
+          <p class="muted">Ninguno de los dos es la fuente de verdad: se rehacen a partir de las carpetas de las incidencias.</p>
+        </div>
+      </details>
+
+      <details class="help-sec" name="help">
+        <summary>Cómo se calculan las Relacionadas</summary>
+        <div class="help-body">
+          <p>Se compara la incidencia abierta con cada una de tu carpeta (usando el índice) y se suman puntos:</p>
+          <table class="help-table">
+            <tbody>
+              <tr><td>Cada etiqueta en común</td><td>+3</td></tr>
+              <tr><td>Misma categoría</td><td>+2</td></tr>
+              <tr><td>Mismo servicio o activo</td><td>+2</td></tr>
+              <tr><td>Cada palabra del título en común (máx. 3)</td><td>+1</td></tr>
+            </tbody>
+          </table>
+          <ul class="help-ul">
+            <li>Aparecen las que suman <strong>3 puntos o más</strong>, de más a menos parecidas, hasta 10 (se ven 3 y el resto con «Ver más»). Una sola etiqueta en común basta.</li>
+            <li>El servicio o el activo <strong>no cuentan</strong> si casi todas las incidencias lo comparten (más del 60 %, con al menos 5): no ayudan a distinguir.</li>
+            <li>Del título solo cuentan palabras de 4 letras o más, sin tildes y sin las muy comunes («cliente», «error», «incidencia»…).</li>
+            <li>Cada una muestra su causa y solución si están en <code>clasificacion.md</code>, y el enlace a la documentación si lo tiene.</li>
+          </ul>
+          <p class="muted">Cuanto mejor etiquetadas estén las incidencias, mejores serán las Relacionadas.</p>
+        </div>
+      </details>
+
+      <details class="help-sec" name="help">
+        <summary>Estado y siguiente SLA</summary>
+        <div class="help-body">
+          <p>Junto al número va el estado, con un color por estado. Arriba de la tarjeta <em>Tiempo</em> está el siguiente SLA: cuánto queda, la fecha y una barra con la parte del plazo consumida desde la apertura. Se actualiza cada minuto.</p>
+          <ul class="help-ul help-sla">
+            <li><span class="sw" style="--c:#A9DCC6"></span>Queda más de la mitad del plazo</li>
+            <li><span class="sw" style="--c:#F3D27F"></span>Queda menos de la mitad</li>
+            <li><span class="sw" style="--c:#F5A28A"></span>Queda menos del 15 % o menos de 1 hora</li>
+            <li><span class="sw" style="--c:#B23A1B"></span>Vencido</li>
+            <li><span class="sw" style="--c:#D9D9D9"></span>En pausa (estado Pendiente)</li>
+          </ul>
+          <p class="muted">En las incidencias resueltas, cerradas o canceladas no se muestra.</p>
+        </div>
+      </details>
+
+      <details class="help-sec" name="help">
+        <summary>Prompt para el agente</summary>
+        <div class="help-body">
+          <p>Al guardar se copia un prompt con las rutas de la incidencia para pegarlo en tu agente (Copilot CLI u otro). La ruta tal como la ve el agente (por ejemplo, desde WSL) y el texto del prompt se cambian en <em>Opciones → Ajustes → Más ajustes…</em>. «Copiar prompt» también está en el detalle de cada incidencia en <em>Ver guardadas</em>.</p>
+        </div>
+      </details>
+
+      <details class="help-sec" name="help">
+        <summary>Ver guardadas y eliminar</summary>
+        <div class="help-body">
+          <p><em>Opciones → Ver guardadas</em> abre todas las incidencias de tu carpeta, con buscador, filtros por estado y etiquetas, orden y el detalle de cada una.</p>
+          <p>Desde ahí se puede <strong>eliminar</strong> una incidencia (o varias, marcando sus casillas). Se borra su carpeta entera, también lo que haya dejado el agente, y desaparece del índice y de Relacionadas. Tus etiquetas se mantienen. <strong>No se puede deshacer</strong>: Chrome no puede mandar archivos a la papelera del sistema, por eso se pide confirmación.</p>
+        </div>
+      </details>
     </div>
   </div>
 
