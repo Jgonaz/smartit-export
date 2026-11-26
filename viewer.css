@@ -405,6 +405,12 @@ html[data-style="classic"] .opts-menu { border-width: 1px; border-color: var(--b
 .help-table { border-collapse: collapse; margin: 0 0 14px; font-size: 14px; min-width: 60%; }
 .help-table td { padding: 6px 12px 6px 0; border-bottom: 1px solid var(--hair); }
 .help-table td:last-child { font-family: var(--mono); font-weight: 700; text-align: right; padding-right: 0; }
+.help-table-wrap { overflow-x: auto; margin: 0 0 12px; }
+.help-table-3 { width: 100%; min-width: 0; margin: 0; font-size: 13.5px; }
+.help-table-3 th { text-align: left; font-weight: 700; padding: 6px 12px 6px 0; border-bottom: var(--bw) solid var(--border); white-space: nowrap; }
+.help-table-3 td { vertical-align: top; line-height: 1.45; }
+.help-table-3 td:last-child { font-family: inherit; font-weight: 600; text-align: left; padding-right: 0; }
+.help-table-3 td:first-child { white-space: nowrap; }
 .help-sla { list-style: none; padding-left: 0; }
 .help-sla .sw { display: inline-block; width: 12px; height: 12px; margin-right: 8px; border-radius: 50%; background: var(--c); border: 1px solid var(--border); vertical-align: -1px; }
 .help-tree { margin: 14px 0 16px; padding: 14px 16px; background: var(--hair); border-radius: 8px; font: 13px/1.6 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre; overflow-x: auto; }

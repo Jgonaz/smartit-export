@@ -232,6 +232,27 @@
       </details>
 
       <details class="help-sec" name="help">
+        <summary>Qué archivos puede tocar tu agente</summary>
+        <div class="help-body">
+          <p>La extensión reescribe algunos archivos cada vez que guardas: lo que el agente cambie en ellos se pierde. Esto es lo que conviene indicarle:</p>
+          <div class="help-table-wrap">
+            <table class="help-table help-table-3">
+              <thead><tr><th>Archivo</th><th>Qué hace la extensión</th><th>Para el agente</th></tr></thead>
+              <tbody>
+                <tr><td><code>indice.md</code>, <code>indice.jsonl</code></td><td>Los regenera enteros al guardar o eliminar</td><td>Solo lectura (para buscar parecidas)</td></tr>
+                <tr><td><code>INC…/incidencia.md</code></td><td>Lo reescribe entero en cada guardado</td><td>Solo lectura</td></tr>
+                <tr><td><code>INC…/adjuntos/</code></td><td>Rehace la carpeta en cada guardado: lo que no sea un adjunto de SmartIT se borra</td><td>Solo lectura; que no deje nada ahí</td></tr>
+                <tr><td><code>INC…/clasificacion.md</code></td><td>Solo actualiza las etiquetas</td><td>Puede editarlo; es donde debe escribir</td></tr>
+                <tr><td><code>etiquetas.md</code></td><td>Solo añade etiquetas nuevas en «Sin describir», sin tocar lo escrito</td><td>Puede editarlo (descripciones, ordenarlas)</td></tr>
+                <tr><td>Otros archivos en <code>INC…/</code> (<code>diagnostico.md</code>…)</td><td>Nunca los toca</td><td>Libre</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="muted">Si el agente cambia las etiquetas mientras tienes el visor abierto, recárgalo antes de guardar: al guardar mandan las etiquetas que muestra el visor.</p>
+        </div>
+      </details>
+
+      <details class="help-sec" name="help">
         <summary>Por qué hay un indice.md y un indice.jsonl</summary>
         <div class="help-body">
           <p>Tienen lo mismo (número, título, estado, servicio, categoría, equipo, etiquetas, causa, solución, documentación y fechas), en dos formatos para dos lectores:</p>
