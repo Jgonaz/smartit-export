@@ -9,7 +9,8 @@ window.SIE_FIXTURE = {
   "status": "En curso",
   "priority": "Alta",
   "created": "20/11/2026 14:14:08",
-  "modified": "23/11/2026 10:25:37"
+  "modified": "23/11/2026 10:25:37",
+  "sla": "27/11/2026 9:27:56"
  },
  "description": "Varios clientes indican que no pueden iniciar sesión en el portal. Tras introducir usuario y contraseña aparece el error \"invalid input\".\nCaptura desde el navegador de escritorio:\n\ncaptura-escritorio\n\nY desde la app móvil:\n\ncaptura-app",
  "fields": [

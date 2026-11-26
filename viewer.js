@@ -243,7 +243,7 @@
     L.push(`# ${[h.number, h.summary].filter(Boolean).join(' — ')}`);
     if (data.sourceUrl) L.push(`URL: ${data.sourceUrl}`);
     [['Estado', h.status], ['Prioridad', h.priority], ['Fecha de creación', h.created],
-      ['Última modificación', h.modified]].forEach(([k, v]) => v && L.push(`${k}: ${v}`));
+      ['Última modificación', h.modified], ['Siguiente SLA', closedNow ? '' : h.sla]].forEach(([k, v]) => v && L.push(`${k}: ${v}`));
     if (tagState.tags.length) L.push(`Etiquetas: ${tagState.tags.join(', ')}`);
     L.push('');
     if (data.summary && data.summary.markdown) {
@@ -458,14 +458,65 @@
   const teamColor = g => `var(--t${Math.max(0, teamKeys.indexOf((g || '').toLowerCase())) % 8})`;
   const stepAt = ts => { let s = null; for (const st of teamSteps) { if (toTs(st.date) <= ts) s = st; else break; } return s; };
 
+  // ---------- cabecera: estado y siguiente SLA ----------
+  (() => {
+    const st = (h.status || '').trim();
+    const chip = $('status-chip');
+    if (st) {
+      const key = st.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '-');
+      chip.dataset.st = key;
+      chip.textContent = st.charAt(0).toUpperCase() + st.slice(1).toLowerCase();
+      chip.hidden = false;
+    }
+    const slaTs = toTs(h.sla);
+    const sla = $('sla-chip');
+    if (!slaTs || closedNow) return;
+    const paused = /pendiente/i.test(st);
+    const DAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+    const when = ts => {
+      const d = new Date(ts), now = new Date();
+      const day0 = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+      const diff = Math.round((day0(d) - day0(now)) / 86400000);
+      const label = diff === 0 ? 'hoy' : diff === 1 ? 'mañana' : diff === -1 ? 'ayer'
+        : `${DAYS[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
+      return `${label} · ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+    };
+    const span = ms => {
+      const min = Math.max(1, Math.round(ms / 60000));
+      const d = Math.floor(min / 1440), hh = Math.floor(min % 1440 / 60), mm = min % 60;
+      if (d) return `${d} d${hh ? ` ${hh} h` : ''}`;
+      if (hh) return `${hh} h${mm ? ` ${mm} min` : ''}`;
+      return `${mm} min`;
+    };
+    const total = slaTs - (toTs(h.created) || 0);
+    const paint = () => {
+      const left = slaTs - Date.now();
+      let state, text;
+      if (paused) { state = 'pausa'; text = 'SLA en pausa'; }
+      else if (left <= 0) { state = 'vencido'; text = `SLA vencido hace ${span(-left)}`; }
+      else {
+        const frac = total > 0 && toTs(h.created) ? left / total : null;
+        state = left < HOUR || (frac !== null && frac < 0.15) ? 'urgente'
+          : (frac !== null ? frac < 0.5 : left < 8 * HOUR) ? 'proximo' : 'plazo';
+        text = `SLA en ${span(left)}`;
+      }
+      sla.dataset.sla = state;
+      sla.replaceChildren(document.createTextNode(text + ' '),
+        Object.assign(document.createElement('span'), { className: 'sla-date', textContent: `· ${when(slaTs)}` }));
+    };
+    sla.title = `Siguiente SLA: ${h.sla}`;
+    paint();
+    sla.hidden = false;
+    if (!paused) setInterval(paint, 60000);
+  })();
+
   // ---------- cabecera: frase de resumen ----------
   (() => {
     const parts = [];
-    const st = (h.status || '').trim();
-    let first = st ? st.charAt(0).toUpperCase() + st.slice(1).toLowerCase() : '';
+    // El estado va en su ficha junto al número; aquí solo la apertura y la prioridad.
     const since = longDay(h.created);
-    if (since) first += first ? (closedNow ? `, abierta el ${since}` : ` desde el ${since}`) : `Abierta el ${since}`;
-    if (h.priority) first += `${first ? ', ' : ''}prioridad ${h.priority.toLowerCase()}`;
+    let first = since ? `Abierta el ${since}` : '';
+    if (h.priority) first += first ? `, prioridad ${h.priority.toLowerCase()}` : `Prioridad ${h.priority.toLowerCase()}`;
     if (first) parts.push(first + '.');
     if (teamSteps.length >= 2) {
       const n = teamKeys.length;

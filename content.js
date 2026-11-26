@@ -105,8 +105,27 @@
       status: fieldValue('7'),
       priority: fieldValue('1000000164'),
       created: fieldValue('3'),
-      modified: fieldValue('6')
+      modified: fieldValue('6'),
+      sla: collectNextSla()
     };
+  }
+
+  // Fecha del siguiente SLA ("El siguiente SLA es 27/11/2026 9:27:56"), que SmartIT muestra junto a la
+  // barra de progreso de la cabecera. El texto y la fecha pueden ir en elementos distintos, por eso se
+  // mira el texto del elemento y de sus contenedores cercanos.
+  function collectNextSla() {
+    const RE = /siguiente\s+SLA[^0-9]{0,40}(\d{1,2}\/\d{1,2}\/\d{4})\s*(\d{1,2}:\d{2}(?::\d{2})?)/i;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (!/siguiente\s+SLA/i.test(node.nodeValue)) continue;
+      let el = node.parentElement;
+      for (let i = 0; el && i < 4; i++, el = el.parentElement) {
+        const m = (el.textContent || '').replace(/\s+/g, ' ').match(RE);
+        if (m) return `${m[1]} ${m[2]}`;
+      }
+    }
+    return '';
   }
 
   function collectDescription() {
