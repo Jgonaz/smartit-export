@@ -24,6 +24,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     })().then(sendResponse, () => sendResponse({ ok: false }));
     return true;
   }
+  if (msg.type === 'load-saved') {
+    (async () => {
+      const h = await SieCarpeta.get();
+      if (!h) return { ok: false, reason: 'no-folder' };
+      if ((await SieCarpeta.status(h)) !== 'granted') return { ok: false, reason: 'permission' };
+      const data = await SieCarpeta.loadSaved(h, msg.folder);
+      return data ? { ok: true, data } : { ok: false, reason: 'not-found' };
+    })().then(sendResponse, err => sendResponse({ ok: false, reason: 'error', error: String(err && err.message || err) }));
+    return true;
+  }
   if (msg.type === 'tags-update') {
     (async () => {
       const h = await SieCarpeta.get();

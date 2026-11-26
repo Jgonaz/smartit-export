@@ -462,7 +462,47 @@
     });
   }
 
+  // ---------- incidencias guardadas abiertas encima («Ver aquí» en Relacionadas) ----------
+  // Cada una es un visor más, apilado encima del anterior, que se conserva tal cual (con su scroll)
+  // para volver a él con la flecha o con Esc.
+  let stack = [];
+  const topViewer = () => stack.length ? stack[stack.length - 1] : (cache && cache.iframe);
+  async function pushSaved(folder, back) {
+    if (!alive() || !overlay) return;
+    const prev = topViewer();
+    const iframe = document.createElement('iframe');
+    iframe.title = 'Incidencia guardada';
+    iframe.setAttribute('allow', 'clipboard-write');
+    iframe.src = chrome.runtime.getURL('viewer.html') + '#saved=' + encodeURIComponent(folder) + '&back=' + encodeURIComponent(back || 'Volver');
+    overlay.appendChild(iframe);
+    stack.push(iframe);
+    await new Promise(resolve => {
+      const done = () => { clearTimeout(t); window.removeEventListener('message', onMsg); resolve(); };
+      const onMsg = e => { if (e.source === iframe.contentWindow && e.data && e.data.sie === 'viewer-ready') done(); };
+      const t = setTimeout(done, 5000);
+      window.addEventListener('message', onMsg);
+    });
+    if (!stack.includes(iframe)) return;
+    iframe.classList.add('on');
+    if (prev) setTimeout(() => { if (stack.includes(iframe)) prev.inert = true; }, T(300));
+    iframe.focus();
+  }
+  function popSaved() {
+    const f = stack.pop();
+    if (!f) return;
+    const prev = topViewer();
+    if (prev) { prev.inert = false; prev.focus(); }
+    f.classList.remove('on');
+    setTimeout(() => f.remove(), T(320));
+  }
+  function clearStack() {
+    const fs = stack; stack = [];
+    if (cache) cache.iframe.inert = false;
+    fs.forEach(f => { f.classList.remove('on'); setTimeout(() => f.remove(), T(340)); });
+  }
+
   function close() {
+    clearStack();
     stopWaitLines();
     token++;
     clearTimeout(startTimer);
@@ -491,9 +531,14 @@
   // ---------- mensajes ----------
   window.addEventListener('message', e => {
     if (!e.data || typeof e.data.sie !== 'string') return;
-    // Del visor incrustado: cerrar con Esc.
-    if (cache && e.source === cache.iframe.contentWindow) {
-      if (e.data.sie === 'viewer-close' && state === 'open') close();
+    // Del visor incrustado (o de una guardada abierta encima): cerrar con Esc, abrir una relacionada, volver.
+    const fromViewer = (cache && e.source === cache.iframe.contentWindow) || stack.some(f => f.contentWindow === e.source);
+    if (fromViewer) {
+      const top = topViewer();
+      const isTop = top && e.source === top.contentWindow;
+      if (e.data.sie === 'viewer-close' && state === 'open') { if (stack.length) { if (isTop) popSaved(); } else close(); }
+      if (e.data.sie === 'viewer-back' && isTop && stack.length) popSaved();
+      if (e.data.sie === 'open-saved' && isTop && state === 'open' && typeof e.data.folder === 'string') pushSaved(e.data.folder, String(e.data.back || ''));
       if (e.data.sie === 'update-dismissed') checkUpdate();
       return;
     }
@@ -523,7 +568,7 @@
     }
   });
 
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && state !== 'idle') close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && state !== 'idle') { if (stack.length) popSaved(); else close(); } });
 
   // Si se navega a otra incidencia o sección, se vuelve a SmartIT y se descarta el visor guardado.
   window.addEventListener('hashchange', () => {

@@ -112,6 +112,48 @@ const SieCarpeta = (() => {
     await writeText(root, 'etiquetas.md', text);
   }
 
+  // Quita una etiqueta del vocabulario (línea «- etiqueta: descripción»). Solo para las que no usa
+  // ninguna incidencia: lo comprueba quien llama (Ver guardadas). Devuelve true si la encontró.
+  async function removeFromVocab(root, tag) {
+    const t = normTag(tag);
+    const text = await readText(root, 'etiquetas.md');
+    if (text == null || !t) return false;
+    let found = false;
+    const lines = text.split(/\r?\n/).filter(l => {
+      const m = /^\s*[-*]\s*`?([^`:\s][^`:]*?)`?\s*(?::\s*(.*))?$/.exec(l);
+      if (m && !/^#/.test(l) && normTag(m[1]) === t) { found = true; return false; }
+      return true;
+    });
+    if (found) await writeText(root, 'etiquetas.md', lines.join('\n').replace(/\n{3,}/g, '\n\n'));
+    return found;
+  }
+  async function vocabulary(root) { return vocabFrom(await readText(root, 'etiquetas.md')); }
+
+  // Datos con los que se pinta el visor (datos.json), con los adjuntos como data: URL, para abrir una
+  // incidencia guardada sin pasar por SmartIT. null si no existe.
+  async function loadSaved(root, folder) {
+    let dir;
+    try { dir = await root.getDirectoryHandle(safe(folder)); } catch (_) { return null; }
+    const text = await readText(dir, 'datos.json');
+    if (text == null) return null;
+    const data = JSON.parse(text);
+    const toDataUrl = file => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(file); });
+    for (const e of data.activity || []) {
+      for (const a of e.attachments || []) {
+        if (!a.file) continue;
+        try {
+          let d = dir;
+          const parts = a.file.split('/');
+          for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p);
+          a.dataUrl = await toDataUrl(await (await d.getFileHandle(parts[parts.length - 1])).getFile());
+        } catch (_) { /* adjunto que ya no está: se verá la miniatura si la hay */ }
+      }
+    }
+    const inc = FM.parse((await readText(dir, 'incidencia.md')) || '').data;
+    data.saved = { folder: safe(folder), folderName: root.name, guardada: inc.guardada || '' };
+    return data;
+  }
+
   // Índice: se rehace leyendo todas las incidencias, así siempre está completo y al día
   // (aunque varias personas guarden en la misma carpeta compartida).
   async function rebuildIndex(root) {
@@ -132,6 +174,8 @@ const SieCarpeta = (() => {
         const url = /^URL:\s*(\S+)/m.exec(parsed.body); if (url && !d.url) d.url = url[1];
       }
       const c = FM.parse((await readText(h, 'clasificacion.md')) || '').data;
+      let visor = false; // hay datos.json: se puede abrir en el visor sin pasar por SmartIT
+      try { await h.getFileHandle('datos.json'); visor = true; } catch (_) {}
       rows.push({
         incidencia: d.incidencia || name, carpeta: name, titulo: d.titulo || '', estado: d.estado || '',
         servicio: d.servicio || '', categoria: d.categoria_operacional || d.categoria_producto || '',
@@ -140,7 +184,7 @@ const SieCarpeta = (() => {
         etiquetas: uniqTags([].concat(c.etiquetas || [], d.etiquetas || [])),
         causa: c.causa || '', solucion: c.solucion || d.resolucion || '',
         documentacion: c.documentacion || '', documentacion_url: c.documentacion_url || '',
-        guardada: d.guardada || ''
+        guardada: d.guardada || '', visor
       });
     }
     const key = r => { const m = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(r.abierta); return m ? +m[3] * 1e4 + +m[2] * 100 + +m[1] : 0; };
@@ -338,5 +382,5 @@ const SieCarpeta = (() => {
     return text.replace(/ – \./g, '.').replace(/[ \t]+\n/g, '\n').trim();
   }
 
-  return { get, set, clear, status, write, updateTags, remove, safe, prompt, DEFAULT_PROMPT, DEFAULT_DOC_PROMPT, tagsInfo, related, rebuildIndex, readText, normTag, FM };
+  return { get, set, clear, status, write, updateTags, remove, removeFromVocab, vocabulary, loadSaved, safe, prompt, DEFAULT_PROMPT, DEFAULT_DOC_PROMPT, tagsInfo, related, rebuildIndex, readText, normTag, FM };
 })();

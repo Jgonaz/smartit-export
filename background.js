@@ -116,6 +116,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     })().then(sendResponse, err => sendResponse({ ok: false, reason: 'error', error: String(err && err.message || err) }));
     return true;
   }
+  if (msg.type === 'load-saved') {
+    ensureOffscreen().then(() => chrome.runtime.sendMessage({ target: 'offscreen', type: 'load-saved', folder: msg.folder }))
+      .then(sendResponse, err => sendResponse({ ok: false, reason: 'error', error: String(err && err.message || err) }));
+    return true;
+  }
   if (msg.type === 'tags-update') {
     ensureOffscreen().then(() => chrome.runtime.sendMessage({ target: 'offscreen', type: 'tags-update', folder: msg.folder, add: msg.add, remove: msg.remove }))
       .then(sendResponse, err => sendResponse({ ok: false, reason: 'error', error: String(err && err.message || err) }));

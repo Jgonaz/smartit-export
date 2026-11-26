@@ -25,13 +25,14 @@
       <div id="ex-quick" class="ex-quick" role="group" aria-label="Filtrar por estado"></div>
       <div id="ex-tags" class="ex-tags" role="group" aria-label="Filtrar por etiquetas"></div>
     </div>
-    <label class="ex-sort">Ordenar por
-      <select id="ex-sort">
-        <option value="guardada">Actualizada más reciente</option>
-        <option value="abierta">Abierta más reciente</option>
-        <option value="numero">Número</option>
-      </select>
-    </label>
+    <div class="ex-sort">
+      <span class="ex-sort-lbl" id="ex-sort-lbl">Ordenar por</span>
+      <button type="button" id="ex-sort-btn" class="ex-sort-btn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="ex-sort-lbl ex-sort-label">
+        <span id="ex-sort-label">Actualizada más reciente</span>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <ul id="ex-sort-menu" class="tag-sugg card ex-sort-menu" role="listbox" aria-labelledby="ex-sort-lbl" hidden></ul>
+    </div>
   </div>
 
   <div id="ex-state" class="ex-state" hidden>
@@ -79,6 +80,8 @@
       </div>
     </div>
   </div>
+
+  <div id="ex-viewer" class="ex-viewer" hidden></div>
 
   <div id="ex-toast" class="toast" role="status" aria-live="polite" hidden>
     <span class="toast-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path id="ex-toast-ico" d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>

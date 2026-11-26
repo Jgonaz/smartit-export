@@ -9,12 +9,17 @@
 <body>
   <header class="top wrap">
     <div class="head-main">
+      <button type="button" id="back" class="back-btn" hidden>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+        <span id="back-label">Volver</span>
+      </button>
       <div class="num-row">
         <div id="number" class="inc-num"></div>
         <span id="status-chip" class="hchip status-chip" hidden></span>
       </div>
       <h1 id="title">Cargando…</h1>
       <p id="lede" class="lede"></p>
+      <p id="saved-note" class="saved-note" hidden></p>
       <div id="tags" class="tags" aria-label="Etiquetas">
         <svg class="ico tags-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></svg>
         <span id="tag-list" class="tag-list"></span>
@@ -207,11 +212,14 @@
   etiquetas.md       vocabulario de etiquetas
   INC000012345678/
     incidencia.md    la incidencia completa
+    datos.json       lo que usa el visor para abrirla sin SmartIT
     adjuntos/        imágenes y archivos
     clasificacion.md etiquetas, causa y solución</pre>
           <dl class="help-list">
             <dt>incidencia.md</dt>
             <dd>Empieza con un bloque de datos (número, título, estado, servicio, categorías, equipos, fechas, siguiente SLA, etiquetas) y sigue con la ficha, la descripción y toda la actividad en Markdown.</dd>
+            <dt>datos.json</dt>
+            <dd>Los datos con los que se pinta el visor (sin las imágenes, que están en <code>adjuntos/</code>). Permiten abrir la incidencia guardada a pantalla completa desde <em>Ver guardadas</em> o desde Relacionadas, sin pasar por SmartIT.</dd>
             <dt>adjuntos/</dt>
             <dd>Las imágenes y archivos de la incidencia, enlazados desde <code>incidencia.md</code>.</dd>
             <dt>clasificacion.md</dt>
@@ -248,7 +256,7 @@
               <thead><tr><th>Archivo</th><th>Qué hace la extensión</th><th>Para el agente</th></tr></thead>
               <tbody>
                 <tr><td><code>indice.md</code>, <code>indice.jsonl</code></td><td>Los regenera enteros al guardar (al abrir o etiquetar) o eliminar</td><td>Solo lectura (para buscar parecidas)</td></tr>
-                <tr><td><code>INC…/incidencia.md</code></td><td>Lo reescribe entero cada vez que abres la incidencia</td><td>Solo lectura</td></tr>
+                <tr><td><code>INC…/incidencia.md</code>, <code>datos.json</code></td><td>Los reescribe enteros cada vez que abres la incidencia</td><td>Solo lectura</td></tr>
                 <tr><td><code>INC…/adjuntos/</code></td><td>Rehace la carpeta cada vez que abres la incidencia: lo que no sea un adjunto de SmartIT se borra</td><td>Solo lectura; que no deje nada ahí</td></tr>
                 <tr><td><code>INC…/clasificacion.md</code></td><td>Solo añade o quita las etiquetas que cambies en el visor</td><td>Puede editarlo; es donde debe escribir</td></tr>
                 <tr><td><code>etiquetas.md</code></td><td>Solo añade etiquetas nuevas en «Sin describir», sin tocar lo escrito</td><td>Puede editarlo (descripciones, ordenarlas)</td></tr>
@@ -289,6 +297,7 @@
             <li>El servicio o el activo <strong>no cuentan</strong> si casi todas las incidencias lo comparten (más del 60 %, con al menos 5): no ayudan a distinguir.</li>
             <li>Del título solo cuentan palabras de 4 letras o más, sin tildes y sin las muy comunes («cliente», «error», «incidencia»…).</li>
             <li>Cada una muestra su causa y solución si están en <code>clasificacion.md</code>, y el enlace a la documentación si lo tiene.</li>
+            <li>Con <strong>SmartIT ↗</strong> se abre en una pestaña nueva; con <strong>Ver aquí</strong>, su versión guardada en el mismo visor. La flecha de arriba (o Esc) te devuelve a la incidencia de la que venías.</li>
           </ul>
           <p class="muted">Cuanto mejor etiquetadas estén las incidencias, mejores serán las Relacionadas.</p>
         </div>
@@ -325,7 +334,8 @@
       <details class="help-sec" name="help">
         <summary>Ver guardadas y eliminar</summary>
         <div class="help-body">
-          <p><em>Opciones → Ver guardadas</em> abre todas las incidencias de tu carpeta, con buscador, filtros por estado y etiquetas, orden y el detalle de cada una.</p>
+          <p><em>Opciones → Ver guardadas</em> abre todas las incidencias de tu carpeta, con buscador, filtros por estado y etiquetas, orden y el detalle de cada una. <strong>Abrir en el panel</strong> muestra la versión guardada en el visor, a pantalla completa; la flecha «Volver a guardadas» (o Esc) te deja el listado como estaba.</p>
+          <p>Las etiquetas de tu vocabulario que no usa ninguna incidencia aparecen en gris con un 0 y una «x» para quitarlas de <code>etiquetas.md</code>.</p>
           <p>Desde ahí se puede <strong>eliminar</strong> una incidencia (o varias, marcando sus casillas). Se borra su carpeta entera, también lo que haya dejado el agente, y desaparece del índice y de Relacionadas. Tus etiquetas se mantienen. <strong>No se puede deshacer</strong>: Chrome no puede mandar archivos a la papelera del sistema, por eso se pide confirmación.</p>
         </div>
       </details>

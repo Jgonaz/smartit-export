@@ -4,11 +4,41 @@
   // Incrustado dentro de SmartIT (iframe) en vez de en una pestaña propia.
   const embedded = window.top !== window;
   if (embedded) document.body.classList.add('embedded');
-  // #<clave>[&nosave]: «nosave» cuando se eligió «Ahora no» en la configuración (no se guarda en la carpeta).
-  const [key, ...hashFlags] = location.hash.slice(1).split('&');
-  const noSave = hashFlags.includes('nosave');
-  const store = await chrome.storage.local.get(key);
-  const data = store[key];
+  // #<clave>[&nosave]: export recién hecho («nosave» si se eligió «Ahora no» en la configuración).
+  // #saved=<carpeta>&back=<texto>: incidencia guardada, abierta desde «Ver guardadas» o desde Relacionadas,
+  // con una flecha para volver a lo anterior.
+  const hashParts = location.hash.slice(1).split('&');
+  const hashParams = new URLSearchParams(hashParts.filter(p => p.includes('=')).join('&'));
+  const savedFolder = hashParams.get('saved');
+  const backLabel = hashParams.get('back');
+  const key = hashParts[0].includes('=') ? '' : hashParts[0];
+  const noSave = hashParts.includes('nosave');
+  const savedMode = !!savedFolder;
+  // Volver a lo anterior: el marco padre (SmartIT o «Ver guardadas») quita esta capa; en una pestaña suelta, atrás.
+  const goBack = () => { if (embedded) parent.postMessage({ sie: 'viewer-back' }, '*'); else history.back(); };
+  if (backLabel) {
+    $('back-label').textContent = backLabel;
+    $('back').hidden = false;
+    $('back').addEventListener('click', goBack);
+  }
+  if (!embedded) window.addEventListener('hashchange', () => location.reload());
+  let data = null;
+  if (savedMode) {
+    let r = null;
+    try { r = await chrome.runtime.sendMessage({ type: 'load-saved', folder: savedFolder }); } catch (_) {}
+    data = r && r.ok ? r.data : null;
+    if (!data) {
+      $('title').textContent = 'No se pudo abrir la incidencia guardada';
+      $('lede').textContent = r && r.reason === 'permission' ? 'Falta el permiso de la carpeta: vuelve a «Ver guardadas» y pulsa «Dar permiso».'
+        : r && r.reason === 'not-found' ? 'No tiene los datos para el visor: ábrela una vez en SmartIT para poder verla aquí.'
+          : 'No se encuentra en tu carpeta.';
+      if (embedded) requestAnimationFrame(() => parent.postMessage({ sie: 'viewer-ready' }, '*'));
+      return;
+    }
+  } else {
+    const store = await chrome.storage.local.get(key);
+    data = store[key];
+  }
   if (!data) {
     $('title').textContent = 'No hay datos para mostrar';
     $('lede').textContent = 'Vuelve a pulsar el icono de exportar en SmartIT.';
@@ -43,7 +73,7 @@
   const IMG_EXT = /\.(png|jpe?g|gif|bmp|webp|svg)$/i;
   const attachments = [];
   (data.activity || []).forEach(e => (e.attachments || []).forEach(a =>
-    attachments.push({ ...a, date: e.date, author: e.author, entry: e })));
+    attachments.push({ ...a, date: e.date, author: e.author, entry: e, orig: a })));
   // data: URL -> blob: URL (Chrome no deja abrir data: en una pestaña nueva).
   const dataUrlToBlobUrl = du => {
     const [head, b64] = du.split(',');
@@ -856,7 +886,9 @@
       const modalOpen = !$('modal').hidden;
       const popOpen = !pop.hidden;
       const menuOpen = !$('opts-menu').hidden || !$('copy-menu').hidden || !$('help').hidden || !$('settings-modal').hidden;
-      if (!modalOpen && !popOpen && !menuOpen) parent.postMessage({ sie: 'viewer-close' }, '*');
+      if (!modalOpen && !popOpen && !menuOpen && !(document.activeElement && document.activeElement.id === 'tag-input' && !$('tag-sugg').hidden)) {
+        if (backLabel) goBack(); else parent.postMessage({ sie: 'viewer-close' }, '*');
+      }
     }, true);
   }
 
@@ -1012,7 +1044,12 @@
   // Estado del guardado automático (icono a la izquierda de «Opciones») y de la documentación externa.
   const saveState = { savedAt: '', dirty: false, doc: null, folderName: '', folder: '' };
   const sync = { state: noSave ? 'off' : 'idle', reason: '', at: 0, error: '' };
-  const ago = t => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'ahora mismo' : m === 1 ? 'hace 1 min' : m < 60 ? `hace ${m} min` : `a las ${new Date(t).getHours()}:${String(new Date(t).getMinutes()).padStart(2, '0')}`; };
+  const ago = t => {
+    const m = Math.round((Date.now() - t) / 60000), d = new Date(t), hm = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+    if (m < 1) return 'ahora mismo';
+    if (m < 60) return m === 1 ? 'hace 1 min' : `hace ${m} min`;
+    return new Date().toDateString() === d.toDateString() ? `a las ${hm}` : `el ${d.getDate()} ${MON[d.getMonth()]}, ${hm}`;
+  };
   function renderSync() {
     const b = $('sync');
     b.dataset.state = sync.state;
@@ -1189,9 +1226,7 @@
       r.items.forEach((it, idx) => {
         const li = el('li', idx >= 3 ? 'extra' : '');
         const head = el('div', 'rel-head');
-        const num = el('span', 'rel-num');
-        if (it.url) { const a = el('a', 'u', it.incidencia); a.href = it.url; a.target = '_blank'; a.rel = 'noopener'; a.title = 'Abrir en SmartIT'; num.appendChild(a); }
-        else num.textContent = it.incidencia;
+        const num = el('span', 'rel-num', it.incidencia);
         head.appendChild(num);
         if (it.estado) head.appendChild(el('span', 'rel-state' + (isClosedStatus(it.estado) ? ' done' : ''), it.estado));
         li.appendChild(head);
@@ -1217,6 +1252,15 @@
           });
         } else if (it.equipo) li.appendChild(el('div', 'rel-why', `Equipo: ${it.equipo}. Sin solución anotada todavía.`));
         if (it.documentacion_url) { const a = el('a', 'rel-more rel-conf', 'Ver documentación'); a.href = it.documentacion_url; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); }
+        // Abrirla: en SmartIT (pestaña nueva) o aquí mismo, con la flecha para volver a esta.
+        const acts = el('div', 'rel-actions');
+        if (it.url) { const a = el('a', 'rel-act', 'SmartIT ↗'); a.href = it.url; a.target = '_blank'; a.rel = 'noopener'; a.title = 'Abrir en SmartIT en una pestaña nueva'; acts.appendChild(a); }
+        const here = el('button', 'rel-act', 'Ver aquí');
+        here.type = 'button';
+        if (it.visor) { here.title = 'Abrir aquí la versión guardada; con la flecha vuelves a esta'; here.onclick = () => openSaved(it.carpeta); }
+        else { here.disabled = true; here.title = 'No tiene los datos para el visor: ábrela una vez en SmartIT para poder verla aquí'; }
+        acts.appendChild(here);
+        li.appendChild(acts);
         list.appendChild(li);
       });
       // Solo las 3 más parecidas a la vista; el resto, al pulsar «Ver N más» (con scroll propio).
@@ -1249,6 +1293,16 @@
       files.push({ path: `adjuntos/${name}`, dataUrl: a.dataUrl });
     });
     files.unshift({ path: 'incidencia.md', text: buildText(paths) });
+    // Datos con los que se pinta el visor, para poder abrirla desde «Ver guardadas» o Relacionadas sin
+    // pasar por SmartIT. Las imágenes no van dentro: se apunta a su archivo en adjuntos/.
+    const pathOf = new Map();
+    attachments.forEach(a => { if (paths.has(a)) pathOf.set(a.orig, paths.get(a)); });
+    const datos = { ...data, activity: (data.activity || []).map(e => ({ ...e, attachments: (e.attachments || []).map(a => {
+      const { dataUrl, ...rest } = a;
+      return pathOf.has(a) ? { ...rest, file: pathOf.get(a) } : rest;
+    }) })) };
+    delete datos.saved;
+    files.push({ path: 'datos.json', text: JSON.stringify(datos) });
     return { folder, files, meta: { frontmatter: frontmatter(), tags: tagState.tags, tagsLoaded: tagState.loaded } };
   }
 
@@ -1344,6 +1398,25 @@
     label.classList.add('swap-in'); ico.classList.add('swap-in');
   }
 
+  // ---------- abrir una incidencia guardada encima de esta (Relacionadas) ----------
+  function openSaved(folder) {
+    const back = `Volver a ${h.number || 'la incidencia'}`;
+    if (embedded) parent.postMessage({ sie: 'open-saved', folder, back }, '*');
+    else location.hash = `saved=${encodeURIComponent(folder)}&back=${encodeURIComponent(back)}`;
+  }
+  // Aviso en las guardadas: es la versión guardada, no lo último de SmartIT.
+  if (savedMode) {
+    const note = $('saved-note');
+    note.append(`Versión guardada${data.saved.guardada ? ' el ' + dayMonth(data.saved.guardada) : ''}`);
+    if (data.sourceUrl || h.url) {
+      note.append(' · ');
+      const a = el('a', 'u', 'Abrir en SmartIT para ver lo último');
+      a.href = data.sourceUrl || h.url; a.target = '_blank'; a.rel = 'noopener';
+      note.appendChild(a);
+    }
+    note.hidden = false;
+  }
+
   // ---------- guardado automático ----------
   // Se guarda la incidencia completa al abrirla (export nuevo) y al pulsar el icono; los cambios de
   // etiquetas solo tocan clasificacion.md y el índice, aplicando lo añadido/quitado sobre lo que haya
@@ -1429,7 +1502,18 @@
     });
   } catch (_) {}
   // Al abrir: se espera a leer las etiquetas guardadas (para no pisarlas) y se guarda la incidencia.
-  if (!noSave) tagsReady.then(() => saveAll());
+  // Una incidencia guardada abierta aquí no se reescribe (no hay datos nuevos de SmartIT); sus
+  // etiquetas sí se pueden cambiar y se guardan como siempre.
+  if (savedMode) {
+    tagsReady.then(() => {
+      saveState.savedAt = data.saved.guardada || '?';
+      saveState.folderName = data.saved.folderName;
+      saveState.folder = data.saved.folder;
+      syncedTags = tagState.tags.slice();
+      sync.at = toTs(data.saved.guardada) || Date.now();
+      setSync('ok');
+    });
+  } else if (!noSave) tagsReady.then(() => saveAll());
   renderSaveStatus();
 
   async function refreshFolder() {

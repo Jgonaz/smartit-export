@@ -18,7 +18,8 @@
     open: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
     doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
     copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/>',
-    trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'
+    trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+    panel: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/>'
   };
 
   // Tema y estilo como en el visor.
@@ -95,7 +96,7 @@
   try {
     const jsonl = await SieCarpeta.readText(root, 'indice.jsonl');
     // Índices de versiones anteriores sin la fecha de guardado: se rehacen una vez.
-    if (jsonl == null || (jsonl.trim() && !jsonl.includes('"guardada"'))) rows = await SieCarpeta.rebuildIndex(root);
+    if (jsonl == null || (jsonl.trim() && !jsonl.includes('"visor"'))) rows = await SieCarpeta.rebuildIndex(root);
     else jsonl.split('\n').forEach(l => { try { const r = JSON.parse(l); if (r) rows.push(r); } catch (_) {} });
   } catch (err) {
     showState('No se pudo leer la carpeta', `${err.message || err}. Si la has movido o borrado, elígela de nuevo en los ajustes de la extensión.`,
@@ -103,6 +104,11 @@
     return;
   }
 
+  // Vocabulario (etiquetas.md): las etiquetas que no usa ninguna incidencia se pueden quitar desde aquí.
+  let vocab = new Map();
+  const loadVocab = async () => { try { vocab = await SieCarpeta.vocabulary(root); } catch (_) { vocab = new Map(); } };
+  await loadVocab();
+  let confirmTag = null; // etiqueta sin uso con la confirmación de quitarla abierta
   const docOf = r => r.documentacion || r.documentacion_url ? { estado: (r.documentacion || '').toLowerCase(), url: r.documentacion_url || '' } : null;
   const isDoc = r => { const d = docOf(r); return !!d && d.estado === 'documentada'; };
   const QUICK = [
@@ -150,7 +156,8 @@
     [...activeTags].forEach(t => { if (!tagCount.has(t)) activeTags.delete(t); });
     const tg = $('ex-tags');
     tg.textContent = '';
-    tg.hidden = !tagCount.size;
+    const unused = [...vocab.keys()].filter(t => !tagCount.has(t)).sort((a, b) => a.localeCompare(b));
+    tg.hidden = !tagCount.size && !unused.length;
     [...tagCount.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).forEach(([t, n]) => {
       const c = tagChip(t);
       const b = el('button', 'ex-tag');
@@ -162,6 +169,41 @@
       b.addEventListener('click', () => { if (activeTags.has(t)) activeTags.delete(t); else activeTags.add(t); renderTop(); renderList(); });
       tg.appendChild(b);
     });
+    // Sin uso: en gris, con su 0 y una «x» para quitarlas del vocabulario (con confirmación en el sitio).
+    unused.forEach(t => {
+      const wrap = el('span', 'ex-tag-unused');
+      if (confirmTag === t) {
+        wrap.classList.add('confirm');
+        wrap.append(el('span', '', `¿Quitar «${t}» del vocabulario?`));
+        const yes = el('button', 'ex-mini danger', 'Quitar'); yes.type = 'button';
+        const no = el('button', 'ex-mini', 'Cancelar'); no.type = 'button';
+        yes.addEventListener('click', async () => {
+          try {
+            await SieCarpeta.removeFromVocab(root, t);
+            delete tagColors[t]; chrome.storage.local.set({ tagColors }).catch(() => {});
+            await loadVocab();
+            toast(`Etiqueta «${t}» quitada del vocabulario`);
+          } catch (err) { toast('No se pudo quitar: ' + (err.message || err), true); }
+          confirmTag = null; renderTop();
+        });
+        no.addEventListener('click', () => { confirmTag = null; renderTop(); });
+        wrap.append(yes, no);
+        tg.appendChild(wrap);
+        setTimeout(() => no.focus(), 0);
+        return;
+      }
+      const c = tagChip(t);
+      c.classList.add('unused');
+      c.title = vocab.get(t) ? `${vocab.get(t)} · No la usa ninguna incidencia` : 'No la usa ninguna incidencia';
+      c.appendChild(el('span', 'n', '0'));
+      const x = el('button', 'ex-tag-x'); x.type = 'button';
+      x.setAttribute('aria-label', `Quitar «${t}» del vocabulario`); x.title = 'Quitar del vocabulario';
+      x.append(svg('<path d="M6 6l12 12M18 6L6 18"/>'));
+      x.addEventListener('click', () => { confirmTag = t; renderTop(); });
+      c.appendChild(x);
+      wrap.appendChild(c);
+      tg.appendChild(wrap);
+    });
     return true;
   }
 
@@ -170,7 +212,7 @@
     const fn = (QUICK.find(x => x[0] === quick) || QUICK[0])[2];
     const list = rows.filter(r => fn(r) && (!activeTags.size || (r.etiquetas || []).some(t => activeTags.has(t))) &&
       (!q || norm([r.incidencia, r.titulo, r.servicio, r.categoria, r.equipo, r.causa, r.solucion, (r.etiquetas || []).join(' ')].join(' ')).includes(q)));
-    const by = $('ex-sort').value;
+    const by = sortBy;
     const num = r => r.incidencia || r.carpeta;
     list.sort(by === 'numero' ? (a, b) => (num(a) < num(b) ? 1 : -1)
       : by === 'abierta' ? (a, b) => ts(b.abierta) - ts(a.abierta) || (num(a) < num(b) ? 1 : -1)
@@ -313,43 +355,11 @@
     if (r.url) acts.appendChild(actionLink('Abrir en SmartIT', 'open', r.url));
     const d = docOf(r);
     if (d && d.url) acts.appendChild(actionLink(d.estado === 'documentada' ? 'Ver documentación' : 'Ver borrador', 'doc', d.url));
-    // «Copiar prompt»: en las finalizadas se elige entre Documentar e Investigar, como en el visor.
-    const copyPromptFor = async doc => {
-      const { agentPath = '', promptTemplate = '', promptDocTemplate = '' } = await chrome.storage.local.get(['agentPath', 'promptTemplate', 'promptDocTemplate']).catch(() => ({}));
-      const text = SieCarpeta.prompt({ agentPath, folderName: root.name, folder: r.carpeta, number: r.incidencia, summary: r.titulo, template: doc ? promptDocTemplate : promptTemplate, doc });
-      try { await navigator.clipboard.writeText(text); toast(`${doc ? 'Prompt para documentar' : 'Prompt'} listo para pegar en el agente (Ctrl+V)`); } catch (_) { toast('No se pudo copiar al portapapeles', true); }
-    };
-    const copyBtn = actionBtn('Copiar prompt', 'copy');
-    if (closed(r.estado)) {
-      const wrap = el('span', 'settings ex-copy-wrap');
-      const menu = el('div', 'opts-menu card ex-copy-menu');
-      menu.setAttribute('role', 'menu'); menu.hidden = true;
-      copyBtn.title = 'Elige qué prompt copiar: Documentar o Investigar';
-      copyBtn.setAttribute('aria-haspopup', 'menu'); copyBtn.setAttribute('aria-expanded', 'false');
-      const item = (title, sub, icon, doc) => {
-        const b = el('button', 'opt-item opt-item-2'); b.type = 'button'; b.setAttribute('role', 'menuitem');
-        const t = el('span'); t.append(el('strong', '', title), el('small', '', sub));
-        b.append(svg(icon), t);
-        b.addEventListener('click', () => { setMenu(false); copyPromptFor(doc); });
-        return b;
-      };
-      const setMenu = open => { menu.hidden = !open; copyBtn.setAttribute('aria-expanded', String(open)); };
-      menu.append(item('Documentar', 'Ya está finalizada: dejarla bien documentada', '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>', true),
-        item('Investigar', 'Analizarla y buscar incidencias parecidas', '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', false));
-      copyBtn.addEventListener('click', ev => { ev.stopPropagation(); setMenu(menu.hidden); if (!menu.hidden) { hideToast(); menu.querySelector('.opt-item').focus(); } });
-      menu.addEventListener('keydown', ev => {
-        const items = [...menu.querySelectorAll('.opt-item')], i = items.indexOf(document.activeElement);
-        if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); items[(i + (ev.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); }
-        if (ev.key === 'Escape') { ev.stopPropagation(); setMenu(false); copyBtn.focus(); }
-      });
-      document.addEventListener('click', ev => { if (!menu.hidden && !wrap.contains(ev.target)) setMenu(false); });
-      wrap.append(copyBtn, menu);
-      acts.appendChild(wrap);
-    } else {
-      copyBtn.title = 'Copia un prompt con la ruta de la incidencia y sus adjuntos';
-      copyBtn.addEventListener('click', () => copyPromptFor(false));
-      acts.appendChild(copyBtn);
-    }
+    // «Abrir en el panel»: el visor completo de la versión guardada, encima del listado.
+    const openBtn = actionBtn('Abrir en el panel', 'panel');
+    if (r.visor) { openBtn.title = 'Abre la incidencia guardada en el visor, a pantalla completa'; openBtn.addEventListener('click', () => openPanel(r.carpeta)); }
+    else { openBtn.disabled = true; openBtn.title = 'No tiene los datos para el visor: ábrela una vez en SmartIT para poder verla aquí'; }
+    acts.appendChild(openBtn);
     const delBtn = actionBtn('Eliminar', 'trash', 'ex-danger');
     delBtn.addEventListener('click', () => askDelete([r.carpeta]));
     acts.appendChild(delBtn);
@@ -484,9 +494,95 @@
   $('ex-bulk-cancel').addEventListener('click', () => { checked.clear(); renderList(); });
   $('ex-bulk-del').addEventListener('click', () => askDelete([...checked]));
 
+  // ---------- visor a pantalla completa («Abrir en el panel») ----------
+  // Cada incidencia abierta es un visor apilado: «Ver aquí» en Relacionadas apila otro encima, y la
+  // flecha (o Esc) vuelve al anterior; al cerrar el último se vuelve al listado tal como estaba.
+  const vwrap = $('ex-viewer');
+  let vstack = [], openerBtn = null;
+  async function pushViewer(folder, back) {
+    const prev = vstack[vstack.length - 1];
+    const f = document.createElement('iframe');
+    f.title = 'Incidencia guardada';
+    f.setAttribute('allow', 'clipboard-write');
+    f.src = 'viewer.html#saved=' + encodeURIComponent(folder) + '&back=' + encodeURIComponent(back);
+    vwrap.appendChild(f);
+    vstack.push(f);
+    if (vstack.length === 1) { vwrap.hidden = false; document.body.classList.add('viewer-open'); }
+    await new Promise(res => {
+      const done = () => { clearTimeout(t); window.removeEventListener('message', onMsg); res(); };
+      const onMsg = e => { if (e.source === f.contentWindow && e.data && e.data.sie === 'viewer-ready') done(); };
+      const t = setTimeout(done, 5000);
+      window.addEventListener('message', onMsg);
+    });
+    if (!vstack.includes(f)) return;
+    requestAnimationFrame(() => f.classList.add('on'));
+    if (prev) setTimeout(() => { if (vstack.includes(f)) prev.inert = true; }, 300);
+    f.focus();
+  }
+  async function popViewer() {
+    const f = vstack.pop();
+    if (!f) return;
+    const prev = vstack[vstack.length - 1];
+    f.classList.remove('on');
+    setTimeout(() => f.remove(), 300);
+    if (prev) { prev.inert = false; prev.focus(); return; }
+    // Vuelta al listado: puede haber cambiado alguna etiqueta, así que se relee el índice.
+    setTimeout(() => { vwrap.hidden = true; document.body.classList.remove('viewer-open'); }, 300);
+    await reloadRows();
+    if (openerBtn && openerBtn.isConnected) openerBtn.focus();
+  }
+  function openPanel(folder) { openerBtn = document.activeElement; pushViewer(folder, 'Volver a guardadas'); }
+  async function reloadRows() {
+    try {
+      const jsonl = await SieCarpeta.readText(root, 'indice.jsonl');
+      if (jsonl != null) { const next = []; jsonl.split('\n').forEach(l => { try { const r = JSON.parse(l); if (r) next.push(r); } catch (_) {} }); rows = next; }
+      await loadVocab();
+    } catch (_) {}
+    const keep = current;
+    if (renderTop()) { renderList(); if (keep && rows.some(r => r.carpeta === keep)) select(keep); }
+  }
+  window.addEventListener('message', e => {
+    if (!e.data || typeof e.data.sie !== 'string') return;
+    const top = vstack[vstack.length - 1];
+    if (!top || e.source !== top.contentWindow) return;
+    if (e.data.sie === 'viewer-back' || e.data.sie === 'viewer-close') popViewer();
+    else if (e.data.sie === 'open-saved' && typeof e.data.folder === 'string') pushViewer(e.data.folder, String(e.data.back || 'Volver'));
+  });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && vstack.length && modal.hidden) { ev.preventDefault(); popViewer(); } });
+
+  // ---------- «Ordenar por»: desplegable propio (mismo estilo que las sugerencias de etiquetas) ----------
+  const SORTS = [['guardada', 'Actualizada más reciente'], ['abierta', 'Abierta más reciente'], ['numero', 'Número']];
+  let sortBy = 'guardada';
+  const sortBtn = $('ex-sort-btn'), sortMenu = $('ex-sort-menu');
+  function renderSort() {
+    $('ex-sort-label').textContent = SORTS.find(x => x[0] === sortBy)[1];
+    sortMenu.textContent = '';
+    SORTS.forEach(([k, label]) => {
+      const li = el('li', 'tag-opt' + (k === sortBy ? ' sel' : ''));
+      li.setAttribute('role', 'option'); li.setAttribute('aria-selected', String(k === sortBy)); li.tabIndex = -1; li.dataset.k = k;
+      li.append(el('span', 'ex-check', k === sortBy ? '✓' : ''), document.createTextNode(label));
+      li.addEventListener('click', () => { sortBy = k; setSortMenu(false); renderSort(); renderList(); sortBtn.focus(); });
+      sortMenu.appendChild(li);
+    });
+  }
+  function setSortMenu(open) {
+    sortMenu.hidden = !open; sortBtn.setAttribute('aria-expanded', String(open));
+    if (open) (sortMenu.querySelector('.sel') || sortMenu.firstChild).focus();
+  }
+  sortBtn.addEventListener('click', ev => { ev.stopPropagation(); setSortMenu(sortMenu.hidden); });
+  sortBtn.addEventListener('keydown', ev => { if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); setSortMenu(true); } });
+  sortMenu.addEventListener('keydown', ev => {
+    const items = [...sortMenu.children], i = items.indexOf(document.activeElement);
+    if (ev.key === 'ArrowDown') { ev.preventDefault(); items[(i + 1) % items.length].focus(); }
+    else if (ev.key === 'ArrowUp') { ev.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+    else if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); document.activeElement.click(); }
+    else if (ev.key === 'Escape' || ev.key === 'Tab') { ev.stopPropagation(); setSortMenu(false); sortBtn.focus(); }
+  });
+  document.addEventListener('click', ev => { if (!sortMenu.hidden && !ev.target.closest('.ex-sort')) setSortMenu(false); });
+  renderSort();
+
   // ---------- arranque ----------
   $('ex-search').addEventListener('input', () => renderList());
-  $('ex-sort').addEventListener('change', () => renderList());
   $('ex-clear').addEventListener('click', () => { $('ex-search').value = ''; quick = 'todas'; activeTags.clear(); renderTop(); renderList(); });
   if (renderTop()) renderList();
 })();
