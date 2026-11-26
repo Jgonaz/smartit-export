@@ -110,22 +110,65 @@
     };
   }
 
-  // Fecha del siguiente SLA ("El siguiente SLA es 27/11/2026 9:27:56"), que SmartIT muestra junto a la
-  // barra de progreso de la cabecera. El texto y la fecha pueden ir en elementos distintos, por eso se
-  // mira el texto del elemento y de sus contenedores cercanos.
-  function collectNextSla() {
-    const RE = /siguiente\s+SLA[^0-9]{0,40}(\d{1,2}\/\d{1,2}\/\d{4})\s*(\d{1,2}:\d{2}(?::\d{2})?)/i;
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  // Fecha del siguiente SLA ("El siguiente SLA es 27/11/2026 9:27:56"), junto a la barra de progreso de
+  // la cabecera. Puede ser un campo de la ficha (#ar<ID>_label / _data, con el valor en un <input>), o
+  // texto repartido en varios elementos, o estar dentro de un shadow DOM: se prueban todas las formas.
+  const SLA_DATE = /(\d{1,2}\/\d{1,2}\/\d{4})\s*(\d{1,2}:\d{2}(?::\d{2})?)/;
+  const SLA_LABEL = /siguiente\s*SLA/i;
+  // Texto visible de un elemento, incluidos los valores de los campos de formulario.
+  function textWithValues(el) {
+    let t = el.textContent || '';
+    el.querySelectorAll('input, textarea').forEach(i => { t += ' ' + (i.value || i.getAttribute('value') || ''); });
+    if (el.matches && el.matches('input, textarea')) t += ' ' + (el.value || '');
+    t += ' ' + (el.getAttribute && (el.getAttribute('title') || el.getAttribute('aria-label')) || '');
+    return t.replace(/\s+/g, ' ');
+  }
+  function slaIn(root) {
+    // 1) Campo de la ficha con esa etiqueta.
+    for (const lab of root.querySelectorAll('[id^="ar"][id$="_label"]')) {
+      if (!SLA_LABEL.test(lab.textContent || '')) continue;
+      const data = root.querySelector(`[id="${lab.id.replace(/_label$/, '_data')}"]`);
+      const m = data && textWithValues(data).match(SLA_DATE);
+      if (m) return `${m[1]} ${m[2]}`;
+    }
+    // 2) Texto: se parte de cualquier texto con "SLA" y se sube por sus contenedores.
+    const walker = (root.ownerDocument || document).createTreeWalker(root, NodeFilter.SHOW_TEXT);
     let node;
     while ((node = walker.nextNode())) {
-      if (!/siguiente\s+SLA/i.test(node.nodeValue)) continue;
+      if (!/SLA/.test(node.nodeValue)) continue;
       let el = node.parentElement;
-      for (let i = 0; el && i < 4; i++, el = el.parentElement) {
-        const m = (el.textContent || '').replace(/\s+/g, ' ').match(RE);
+      for (let i = 0; el && i < 5; i++, el = el.parentElement) {
+        const t = textWithValues(el);
+        const at = t.search(SLA_LABEL);
+        if (at < 0) continue;
+        const m = t.slice(at).match(SLA_DATE);
         if (m) return `${m[1]} ${m[2]}`;
       }
     }
+    // 3) Shadow DOM abiertos.
+    for (const el of root.querySelectorAll('*')) {
+      if (el.shadowRoot) { const r = slaIn(el.shadowRoot); if (r) return r; }
+    }
     return '';
+  }
+  function collectNextSla() {
+    let r = slaIn(document.body);
+    // También en los iframes de la misma web que haya dentro de la ficha.
+    for (const f of document.querySelectorAll('iframe')) {
+      if (r) break;
+      try { const d = f.contentDocument; if (d && d.body) r = slaIn(d.body); } catch (_) { /* de otro origen */ }
+    }
+    if (!r) {
+      // Para depurar: dónde aparece "SLA" en la ficha (sin datos personales: solo la estructura cercana).
+      const spots = [];
+      const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = w.nextNode()) && spots.length < 3) {
+        if (/SLA/.test(n.nodeValue) && n.parentElement) spots.push((n.parentElement.parentElement || n.parentElement).outerHTML.slice(0, 600));
+      }
+      console.info('[SmartIT export] No se encontró la fecha del siguiente SLA.', spots);
+    }
+    return r;
   }
 
   function collectDescription() {
