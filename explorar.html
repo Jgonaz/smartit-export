@@ -8,33 +8,82 @@
   <script src="theme.js"></script>
 </head>
 <body class="ex">
-  <header class="wrap ex-top">
+  <header class="ex-top">
     <div>
       <div class="inc-num" id="ex-folder">Carpeta</div>
       <h1>Incidencias guardadas</h1>
       <p id="ex-lede" class="lede"></p>
     </div>
-    <div class="ex-tools">
-      <input id="ex-search" class="ex-search" type="search" placeholder="Buscar por número, título, etiqueta, solución…" autocomplete="off" spellcheck="false" aria-label="Buscar">
-    </div>
+    <label class="ex-search-box">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="ex-search" type="search" placeholder="Buscar por número, título, etiqueta o solución" autocomplete="off" spellcheck="false" aria-label="Buscar">
+    </label>
   </header>
 
-  <div id="ex-state" class="wrap ex-state" hidden>
-    <p id="ex-state-text"></p>
-    <button type="button" id="ex-grant" class="btn-card" hidden>Dar permiso</button>
+  <div id="ex-toolbar" class="ex-toolbar" hidden>
+    <div class="ex-filters">
+      <div id="ex-quick" class="ex-quick" role="group" aria-label="Filtrar por estado"></div>
+      <div id="ex-tags" class="ex-tags" role="group" aria-label="Filtrar por etiquetas"></div>
+    </div>
+    <label class="ex-sort">Ordenar por
+      <select id="ex-sort">
+        <option value="guardada">Guardada más reciente</option>
+        <option value="abierta">Abierta más reciente</option>
+        <option value="numero">Número</option>
+      </select>
+    </label>
   </div>
 
-  <div id="ex-tags" class="wrap ex-tags" hidden></div>
+  <div id="ex-state" class="ex-state" hidden>
+    <div class="card ex-state-card">
+      <h2 id="ex-state-title"></h2>
+      <p id="ex-state-text"></p>
+      <button type="button" id="ex-state-btn" class="btn-card" hidden></button>
+    </div>
+  </div>
 
-  <main id="ex-main" class="wrap ex-main" hidden>
-    <section class="ex-list-col">
+  <main id="ex-main" class="ex-main" hidden>
+    <section class="ex-list-col" aria-label="Incidencias">
+      <div id="ex-bulk" class="ex-bulk" hidden>
+        <span><strong id="ex-bulk-n">0</strong> seleccionadas</span>
+        <span class="ex-bulk-actions">
+          <button type="button" id="ex-bulk-cancel">Cancelar</button>
+          <button type="button" id="ex-bulk-del" class="del">Eliminar</button>
+        </span>
+      </div>
       <div class="ex-count muted" id="ex-count"></div>
       <ol id="ex-list" class="ex-list"></ol>
+      <div id="ex-noresults" class="ex-noresults" hidden>
+        <p>Ninguna incidencia coincide con la búsqueda o los filtros.</p>
+        <button type="button" id="ex-clear" class="btn-card">Quitar filtros</button>
+      </div>
     </section>
-    <aside id="ex-detail" class="ex-detail card">
-      <p class="muted ex-empty">Elige una incidencia para ver su clasificación y su contenido.</p>
-    </aside>
+    <article id="ex-detail" class="ex-detail card" aria-live="polite">
+      <div id="ex-dhead" class="ex-dhead"></div>
+      <div id="ex-dbody" class="ex-dbody">
+        <p class="muted">Elige una incidencia para ver su clasificación y su contenido.</p>
+      </div>
+    </article>
   </main>
+
+  <div id="ex-confirm" class="help-modal ex-confirm" role="dialog" aria-modal="true" aria-labelledby="ex-confirm-title" hidden>
+    <div class="help-card card">
+      <button type="button" class="help-close" id="ex-confirm-close" aria-label="Cerrar">✕</button>
+      <h2 id="ex-confirm-title" class="mono-h"></h2>
+      <p id="ex-confirm-text"></p>
+      <ul id="ex-confirm-list" class="ex-confirm-list"></ul>
+      <p class="ex-warn">No se puede deshacer.</p>
+      <div class="ex-confirm-foot">
+        <button type="button" id="ex-confirm-cancel" class="btn-card">Cancelar</button>
+        <button type="button" id="ex-confirm-ok" class="btn-card ex-danger-solid">Eliminar definitivamente</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ex-toast" class="toast" role="status" aria-live="polite" hidden>
+    <span class="toast-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path id="ex-toast-ico" d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+    <span id="ex-toast-text"></span>
+  </div>
 
   <script src="carpeta.js"></script>
   <script src="explorar.js"></script>

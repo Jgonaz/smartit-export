@@ -139,7 +139,8 @@ const SieCarpeta = (() => {
         activo: d.activo || '', url: d.url || '',
         etiquetas: uniqTags([].concat(c.etiquetas || [], d.etiquetas || [])),
         causa: c.causa || '', solucion: c.solucion || d.resolucion || '',
-        documentacion: c.documentacion || '', documentacion_url: c.documentacion_url || ''
+        documentacion: c.documentacion || '', documentacion_url: c.documentacion_url || '',
+        guardada: d.guardada || ''
       });
     }
     const key = r => { const m = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(r.abierta); return m ? +m[3] * 1e4 + +m[2] * 100 + +m[1] : 0; };
@@ -155,6 +156,25 @@ const SieCarpeta = (() => {
     await writeText(root, 'indice.md', md);
     await writeText(root, 'indice.jsonl', rows.map(r => JSON.stringify(r)).join('\n') + (rows.length ? '\n' : ''));
     return rows;
+  }
+
+  // ---------- eliminar incidencias guardadas ----------
+  // Borra del todo la carpeta de cada incidencia (con lo que haya dejado el agente) y regenera el índice.
+  // Solo acepta subcarpetas directas que tengan un incidencia.md, para no borrar nada más por error.
+  // etiquetas.md no se toca: es el vocabulario y sigue valiendo aunque no quede ninguna con esa etiqueta.
+  async function remove(root, folders) {
+    const done = [], failed = [];
+    for (const name of folders) {
+      try {
+        if (!name || /[\\/]/.test(name) || name === '.' || name === '..') throw new Error('nombre no válido');
+        const dir = await root.getDirectoryHandle(name);
+        if ((await readText(dir, 'incidencia.md')) == null) throw new Error('no es una incidencia guardada');
+        await root.removeEntry(name, { recursive: true });
+        done.push(name);
+      } catch (err) { failed.push({ name, error: err.message || String(err) }); }
+    }
+    const rows = await rebuildIndex(root);
+    return { done, failed, rows };
   }
 
   // ---------- incidencias relacionadas ----------
@@ -291,5 +311,5 @@ const SieCarpeta = (() => {
     return text.replace(/ – \./g, '.').replace(/[ \t]+\n/g, '\n').trim();
   }
 
-  return { get, set, clear, status, write, safe, prompt, DEFAULT_PROMPT, tagsInfo, related, rebuildIndex, readText, normTag, FM };
+  return { get, set, clear, status, write, remove, safe, prompt, DEFAULT_PROMPT, tagsInfo, related, rebuildIndex, readText, normTag, FM };
 })();

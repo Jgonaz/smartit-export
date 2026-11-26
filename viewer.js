@@ -1261,7 +1261,7 @@
     try {
       const r = await chrome.runtime.sendMessage({ type: 'folder-status' });
       $('settings-folder').textContent = !r || !r.name ? 'Sin elegir' : r.name + (r.status === 'granted' ? '' : ' (sin permiso)');
-      $('opt-folder').hidden = !(r && r.name); // «Ver carpeta» solo si hay una elegida
+      $('opt-folder').hidden = !(r && r.name); // «Ver guardadas» solo si hay carpeta elegida
     } catch (_) { $('settings-folder').textContent = 'Sin elegir'; }
   }
   refreshFolder();
@@ -1322,7 +1322,7 @@
     chrome.storage.local.set({ style: stylePref });
   }));
 
-  // ---------- menú «Opciones»: Ayuda, Ajustes y Ver carpeta ----------
+  // ---------- menú «Opciones»: Ayuda, Ajustes y Ver guardadas ----------
   const optsBtn = $('opts-btn'), optsMenu = $('opts-menu');
   const setOpts = open => { optsMenu.hidden = !open; optsBtn.setAttribute('aria-expanded', String(open)); };
   optsBtn.addEventListener('click', ev => { ev.stopPropagation(); setOpts(optsMenu.hidden); if (!optsMenu.hidden) $('opt-help').focus(); });
