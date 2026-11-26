@@ -305,13 +305,43 @@
     if (r.url) acts.appendChild(actionLink('Abrir en SmartIT', 'open', r.url));
     const d = docOf(r);
     if (d && d.url) acts.appendChild(actionLink(d.estado === 'documentada' ? 'Ver documentación' : 'Ver borrador', 'doc', d.url));
+    // «Copiar prompt»: en las finalizadas se elige entre Documentar e Investigar, como en el visor.
+    const copyPromptFor = async doc => {
+      const { agentPath = '', promptTemplate = '', promptDocTemplate = '' } = await chrome.storage.local.get(['agentPath', 'promptTemplate', 'promptDocTemplate']).catch(() => ({}));
+      const text = SieCarpeta.prompt({ agentPath, folderName: root.name, folder: r.carpeta, number: r.incidencia, summary: r.titulo, template: doc ? promptDocTemplate : promptTemplate, doc });
+      try { await navigator.clipboard.writeText(text); toast(`${doc ? 'Prompt para documentar' : 'Prompt'} listo para pegar en el agente (Ctrl+V)`); } catch (_) { toast('No se pudo copiar al portapapeles', true); }
+    };
     const copyBtn = actionBtn('Copiar prompt', 'copy');
-    copyBtn.addEventListener('click', async () => {
-      const { agentPath = '', promptTemplate = '' } = await chrome.storage.local.get(['agentPath', 'promptTemplate']).catch(() => ({}));
-      const text = SieCarpeta.prompt({ agentPath, folderName: root.name, folder: r.carpeta, number: r.incidencia, summary: r.titulo, template: promptTemplate });
-      try { await navigator.clipboard.writeText(text); toast('Prompt listo para pegar en el agente (Ctrl+V)'); } catch (_) { toast('No se pudo copiar al portapapeles', true); }
-    });
-    acts.appendChild(copyBtn);
+    if (closed(r.estado)) {
+      const wrap = el('span', 'settings ex-copy-wrap');
+      const menu = el('div', 'opts-menu card ex-copy-menu');
+      menu.setAttribute('role', 'menu'); menu.hidden = true;
+      copyBtn.title = 'Elige qué prompt copiar: Documentar o Investigar';
+      copyBtn.setAttribute('aria-haspopup', 'menu'); copyBtn.setAttribute('aria-expanded', 'false');
+      const item = (title, sub, icon, doc) => {
+        const b = el('button', 'opt-item opt-item-2'); b.type = 'button'; b.setAttribute('role', 'menuitem');
+        const t = el('span'); t.append(el('strong', '', title), el('small', '', sub));
+        b.append(svg(icon), t);
+        b.addEventListener('click', () => { setMenu(false); copyPromptFor(doc); });
+        return b;
+      };
+      const setMenu = open => { menu.hidden = !open; copyBtn.setAttribute('aria-expanded', String(open)); };
+      menu.append(item('Documentar', 'Ya está finalizada: dejarla bien documentada', '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>', true),
+        item('Investigar', 'Analizarla y buscar incidencias parecidas', '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', false));
+      copyBtn.addEventListener('click', ev => { ev.stopPropagation(); setMenu(menu.hidden); if (!menu.hidden) menu.querySelector('.opt-item').focus(); });
+      menu.addEventListener('keydown', ev => {
+        const items = [...menu.querySelectorAll('.opt-item')], i = items.indexOf(document.activeElement);
+        if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); items[(i + (ev.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); }
+        if (ev.key === 'Escape') { ev.stopPropagation(); setMenu(false); copyBtn.focus(); }
+      });
+      document.addEventListener('click', ev => { if (!menu.hidden && !wrap.contains(ev.target)) setMenu(false); });
+      wrap.append(copyBtn, menu);
+      acts.appendChild(wrap);
+    } else {
+      copyBtn.title = 'Copia un prompt con la ruta de la incidencia y sus adjuntos';
+      copyBtn.addEventListener('click', () => copyPromptFor(false));
+      acts.appendChild(copyBtn);
+    }
     const delBtn = actionBtn('Eliminar', 'trash', 'ex-danger');
     delBtn.addEventListener('click', () => askDelete([r.carpeta]));
     acts.appendChild(delBtn);

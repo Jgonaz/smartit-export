@@ -293,17 +293,21 @@ const SieCarpeta = (() => {
     return { folderName: handle.name, folder: safe(folder), tags, doc: docOf(clas), indexed: rows ? rows.length : null };
   }
 
-  // Prompt que se copia al guardar. La plantilla se edita en los ajustes; variables:
+  // Prompts que copia «Copiar prompt» (investigar y documentar). Las plantillas se editan en los ajustes; variables:
   // {incidencia} {titulo} {carpeta} (ruta de la incidencia) {raiz} (ruta de la carpeta elegida).
   const DEFAULT_PROMPT = 'Analiza la incidencia {incidencia} – {titulo}.\n' +
     'Está en {carpeta}/incidencia.md y sus adjuntos en {carpeta}/adjuntos/ (revisa también las imágenes).\n' +
     'Busca incidencias parecidas en {raiz}/indice.md.';
-  function prompt({ agentPath, folderName, folder, number, summary, template }) {
+  // Para incidencias ya finalizadas (resueltas, cerradas, canceladas): solo documentar, no investigar.
+  const DEFAULT_DOC_PROMPT = 'La incidencia {incidencia} – {titulo} ya está finalizada: no hay que investigarla ni resolverla, solo dejarla bien documentada.\n' +
+    'Revisa {carpeta}/incidencia.md y sus adjuntos en {carpeta}/adjuntos/, completa causa, solución y etiquetas en {carpeta}/clasificacion.md y prepara la documentación siguiendo el procedimiento del equipo.\n' +
+    'Comprueba en {raiz}/indice.md si hay incidencias parecidas ya documentadas.';
+  function prompt({ agentPath, folderName, folder, number, summary, template, doc }) {
     const base = (agentPath || '').trim().replace(/[\\/]+$/, '');
     const win = base.includes('\\') && !base.includes('/');
     const root = base || folderName || 'la carpeta elegida';
     const dir = root + (win ? '\\' : '/') + folder;
-    let text = (template && template.trim()) || DEFAULT_PROMPT;
+    let text = (template && template.trim()) || (doc ? DEFAULT_DOC_PROMPT : DEFAULT_PROMPT);
     const vars = { incidencia: number || folder, titulo: summary || '', carpeta: dir, raiz: root };
     text = text.replace(/\{(incidencia|titulo|carpeta|raiz)\}/g, (_, k) => vars[k]);
     // Rutas de Windows: las barras de la plantilla («{carpeta}/adjuntos/») pasan a «\\».
@@ -311,5 +315,5 @@ const SieCarpeta = (() => {
     return text.replace(/ – \./g, '.').replace(/[ \t]+\n/g, '\n').trim();
   }
 
-  return { get, set, clear, status, write, remove, safe, prompt, DEFAULT_PROMPT, tagsInfo, related, rebuildIndex, readText, normTag, FM };
+  return { get, set, clear, status, write, remove, safe, prompt, DEFAULT_PROMPT, DEFAULT_DOC_PROMPT, tagsInfo, related, rebuildIndex, readText, normTag, FM };
 })();

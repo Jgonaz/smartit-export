@@ -126,3 +126,5 @@ html[data-style="classic"] .ex-tag[aria-pressed="true"] .tag { box-shadow: 0 0 0
   .ex-dbody { overflow: visible; }
   .ex-top, .ex-toolbar, .ex-state, .ex-main { padding-left: 20px; padding-right: 20px; }
 }
+.ex-copy-wrap { display: inline-flex; }
+.ex-copy-menu { min-width: 300px; }

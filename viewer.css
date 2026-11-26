@@ -345,6 +345,20 @@ html[data-style="classic"] a.link-btn, html[data-style="classic"] .link-btn { co
 .opt-item { display: flex; align-items: center; gap: 10px; width: 100%; height: 38px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-weight: 600; text-align: left; cursor: pointer; white-space: nowrap; }
 .opt-item:hover, .opt-item:focus-visible, .opt-item[aria-expanded="true"] { background: var(--hair); outline: none; }
 .opt-item .ico { width: 17px; height: 17px; color: var(--grey); }
+.copy-menu { left: auto; right: 0; min-width: 300px; transform-origin: top right; }
+.opt-item-2 { height: auto; padding: 9px 10px; align-items: flex-start; white-space: normal; }
+.opt-item-2 .ico { margin-top: 2px; flex: none; }
+.opt-item-2 span { display: flex; flex-direction: column; gap: 1px; }
+.opt-item-2 small { font-size: 12.5px; font-weight: 400; color: var(--grey); }
+.copy-md { font-size: 13.5px; }
+.toolbar-title { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.mode-in { animation: mode-in .28s cubic-bezier(.2,.8,.2,1); }
+@keyframes mode-in { from { opacity: 0; transform: translateY(8px); } }
+.seg button { transition: background-color .2s ease, color .2s ease; }
+.toast.bottom { top: auto; bottom: 28px; right: auto; left: 50%; transform: translateX(-50%); animation-name: toast-up-in; }
+.toast.bottom.out { animation-name: toast-up-out; }
+@keyframes toast-up-in { from { opacity: 0; transform: translate(-50%, 20px) scale(.96); } to { transform: translateX(-50%); } }
+@keyframes toast-up-out { to { opacity: 0; transform: translate(-50%, 12px); } }
 .opt-chev { margin-left: auto; }
 .btn-opts .ico { width: 17px; height: 17px; }
 html[data-style="classic"] .btn-opts { background: var(--card); color: var(--ink); border-color: var(--border); }
@@ -376,9 +390,12 @@ html[data-style="classic"] .opts-menu { border-width: 1px; border-color: var(--b
 .help-sec summary::-webkit-details-marker { display: none; }
 .help-sec summary::after { content: ""; flex: none; width: 8px; height: 8px; border-right: 2px solid var(--grey); border-bottom: 2px solid var(--grey); transform: rotate(45deg) translate(-2px, -2px); transition: transform .2s ease; }
 .help-sec[open] summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
-.help-sec summary:hover { color: var(--ink); background: var(--hair); }
 .help-sec summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.help-body { padding: 0 2px 16px; animation: tag-in .2s ease; }
+.help-body { padding: 0 2px 16px; }
+/* Plegar y desplegar con animación (Chrome 131+; en versiones anteriores se abre sin animar). */
+.help-card { interpolate-size: allow-keywords; }
+.help-sec::details-content { block-size: 0; overflow: hidden; opacity: 0; transition: block-size .28s cubic-bezier(.2,.8,.2,1), opacity .2s ease, content-visibility .28s allow-discrete; }
+.help-sec[open]::details-content { block-size: auto; opacity: 1; }
 .help-body > :first-child { margin-top: 0; }
 .help-ul { margin: 0 0 12px; padding-left: 20px; line-height: 1.55; }
 .help-ul li + li { margin-top: 5px; }
@@ -410,6 +427,7 @@ html[data-style="classic"] .help-card { border-width: 1px; border-color: var(--b
 /* Dentro de SmartIT: ya estás en SmartIT, sobra el enlace para abrirlo. */
 body.embedded #source { display: none !important; }
 
+@media (prefers-reduced-motion: reduce) { .help-sec::details-content, .mode-in { transition: none; animation: none; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 @media (max-width: 1100px) { .body-grid { grid-template-columns: 1fr; } }
 body.embedded .fields-card .card-foot { display: none; }

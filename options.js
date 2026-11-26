@@ -42,10 +42,9 @@
 
   async function renderPrompt(handle) {
     handle = handle || await SieCarpeta.get();
-    $('prompt-preview').textContent = SieCarpeta.prompt({
-      agentPath: $('agent-path').value, folderName: handle && handle.name, template: $('prompt-template').value,
-      folder: 'INC000000123456', number: 'INC000000123456', summary: 'Título de la incidencia'
-    });
+    const base = { agentPath: $('agent-path').value, folderName: handle && handle.name, folder: 'INC000000123456', number: 'INC000000123456', summary: 'Título de la incidencia' };
+    $('prompt-preview').textContent = SieCarpeta.prompt({ ...base, template: $('prompt-template').value });
+    $('prompt-doc-preview').textContent = SieCarpeta.prompt({ ...base, template: $('prompt-doc-template').value, doc: true });
   }
 
   // Termina el guardado que dejó pendiente el visor.
@@ -117,17 +116,19 @@
     await render();
   });
 
-  const { agentPath = '', promptTemplate = '' } = await chrome.storage.local.get(['agentPath', 'promptTemplate']);
+  const { agentPath = '', promptTemplate = '', promptDocTemplate = '' } = await chrome.storage.local.get(['agentPath', 'promptTemplate', 'promptDocTemplate']);
   $('agent-path').value = agentPath;
   $('prompt-template').value = promptTemplate || SieCarpeta.DEFAULT_PROMPT;
-  // Se guarda vacío si es el de por defecto, para que futuras mejoras del prompt por defecto lleguen solas.
-  const savePrompt = () => {
-    const v = $('prompt-template').value.trim();
-    chrome.storage.local.set({ promptTemplate: v && v !== SieCarpeta.DEFAULT_PROMPT.trim() ? v : '' });
-  };
-  let pt;
-  $('prompt-template').addEventListener('input', () => { renderPrompt(); clearTimeout(pt); pt = setTimeout(savePrompt, 300); });
-  $('prompt-reset').addEventListener('click', () => { $('prompt-template').value = SieCarpeta.DEFAULT_PROMPT; renderPrompt(); savePrompt(); });
+  $('prompt-doc-template').value = promptDocTemplate || SieCarpeta.DEFAULT_DOC_PROMPT;
+  // Se guardan vacíos si son los de por defecto, para que futuras mejoras de los prompts por defecto lleguen solas.
+  const promptFields = [['prompt-template', 'promptTemplate', SieCarpeta.DEFAULT_PROMPT, 'prompt-reset'], ['prompt-doc-template', 'promptDocTemplate', SieCarpeta.DEFAULT_DOC_PROMPT, 'prompt-doc-reset']];
+  const promptTimers = [];
+  const savePrompt = () => promptFields.forEach(([id, key, def]) => { const v = $(id).value.trim(); chrome.storage.local.set({ [key]: v && v !== def.trim() ? v : '' }); });
+  promptFields.forEach(([id, key, def, reset], i) => {
+    const save = () => { const v = $(id).value.trim(); chrome.storage.local.set({ [key]: v && v !== def.trim() ? v : '' }); };
+    $(id).addEventListener('input', () => { renderPrompt(); clearTimeout(promptTimers[i]); promptTimers[i] = setTimeout(save, 300); });
+    $(reset).addEventListener('click', () => { $(id).value = def; renderPrompt(); save(); });
+  });
   let t;
   $('agent-path').addEventListener('input', () => {
     renderPrompt();
@@ -161,7 +162,7 @@
   // «Guardar cambios»: guarda la ruta para el agente y cierra la ventana.
   if (fromSave) $('foot-note').textContent = 'Al terminar, pulsa «Guardar cambios» para cerrar esta ventana.';
   $('done').addEventListener('click', async () => {
-    clearTimeout(t); clearTimeout(pt);
+    clearTimeout(t); promptTimers.forEach(clearTimeout);
     await chrome.storage.local.set({ agentPath: $('agent-path').value.trim() });
     savePrompt();
     $('done').textContent = 'Guardado';

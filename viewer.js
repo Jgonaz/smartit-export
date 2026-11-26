@@ -237,7 +237,7 @@
   const indent = (s, pad = '  ') => s.split('\n').join('\n' + pad);
   // files (opcional): Map adjunto -> ruta relativa dentro de la carpeta guardada; si existe, se enlaza cada adjunto.
   function buildText(files) {
-    const withSystem = $('opt-system').checked;
+    const withSystem = true; // los eventos automáticos se muestran siempre
     const withFields = true; // los datos de la ficha van siempre
     const L = [];
     L.push(`# ${[h.number, h.summary].filter(Boolean).join(' — ')}`);
@@ -626,7 +626,7 @@
   }
 
   function renderChat() {
-    const withSystem = $('opt-system').checked;
+    const withSystem = true; // los eventos automáticos se muestran siempre
     const chat = $('chat');
     chat.textContent = '';
     const add = node => { const li = el('li'); li.appendChild(node); chat.appendChild(li); };
@@ -827,10 +827,19 @@
     $('md').hidden = mode !== 'md';
     $('mode-view').setAttribute('aria-pressed', String(mode === 'view'));
     $('mode-md').setAttribute('aria-pressed', String(mode === 'md'));
+    // En la vista Markdown el bloque es toda la información de la incidencia, y se puede copiar.
+    $('main-title').textContent = mode === 'md' ? 'Información' : 'Conversación';
+    $('copy-md').hidden = mode !== 'md';
   }
-  $('opt-system').onchange = render;
-  $('mode-view').onclick = () => { mode = 'view'; render(); };
-  $('mode-md').onclick = () => { mode = 'md'; render(); };
+  // Al cambiar entre Vista y Markdown, el bloque nuevo entra con una animación corta.
+  const switchMode = m => {
+    if (m === mode) return;
+    mode = m; render();
+    const shown = $(m === 'md' ? 'md' : 'view');
+    shown.classList.remove('mode-in'); void shown.offsetWidth; shown.classList.add('mode-in');
+  };
+  $('mode-view').onclick = () => switchMode('view');
+  $('mode-md').onclick = () => switchMode('md');
   renderMetro();
   renderSummary();
   renderTime();
@@ -844,7 +853,7 @@
       if (ev.key !== 'Escape') return;
       const modalOpen = !$('modal').hidden;
       const popOpen = !pop.hidden;
-      const menuOpen = !$('opts-menu').hidden || !$('help').hidden || !$('settings-modal').hidden;
+      const menuOpen = !$('opts-menu').hidden || !$('copy-menu').hidden || !$('help').hidden || !$('settings-modal').hidden;
       if (!modalOpen && !popOpen && !menuOpen) parent.postMessage({ sie: 'viewer-close' }, '*');
     }, true);
   }
@@ -873,14 +882,77 @@
     check();
   })();
 
-  $('copy').onclick = async () => {
-    await navigator.clipboard.writeText(buildText());
-    const b = $('copy');
-    morphButton(b, $('copy-label'), '¡Copiado!', 'ok');
-    toast(attachments.length ? 'Markdown copiado al portapapeles (aviso: las imágenes no se copiarán)' : 'Markdown copiado al portapapeles', { ms: attachments.length ? 4500 : 2200 });
-    clearTimeout(b._resetT);
-    b._resetT = setTimeout(() => morphButton(b, $('copy-label'), 'Copiar'), 1800);
-  };
+  // ---------- «Copiar prompt» y «Copiar Markdown» ----------
+  // Guardada: copia el prompt con las rutas de la carpeta. Sin guardar: copia el Markdown (sin imágenes).
+  // Finalizada (resuelta, cerrada, cancelada…): primero se elige entre Documentar e Investigar.
+  const copyBtn = $('copy'), copyMenu = $('copy-menu');
+  const isSaved = () => !!saveState.savedAt;
+  function flashCopied() {
+    morphButton(copyBtn, $('copy-label'), '¡Copiado!', 'ok');
+    clearTimeout(copyBtn._resetT);
+    copyBtn._resetT = setTimeout(() => morphButton(copyBtn, $('copy-label'), 'Copiar prompt'), 1800);
+  }
+  async function copyMarkdown(fromPrompt) {
+    try { await navigator.clipboard.writeText(buildText()); } catch (_) { toast('No se pudo copiar al portapapeles', { error: true }); return; }
+    if (fromPrompt) flashCopied();
+    const what = fromPrompt ? 'Incidencia copiada en Markdown para pegarla en el agente' : 'Markdown copiado al portapapeles';
+    toast(attachments.length ? `${what}\nAviso: las imágenes no se copian (para eso, «Guardar»).` : what, { ms: attachments.length ? 5000 : 2600, bottom: !fromPrompt });
+  }
+  // La copia guardada puede no estar al día: etiquetas sin guardar o cambios en SmartIT posteriores al guardado.
+  function staleNote() {
+    if (saveState.dirty) return 'Aviso: hay etiquetas sin guardar; pulsa «Guardar» para que el agente las vea.';
+    const saved = saveState.savedAt !== '?' ? toTs(saveState.savedAt) : 0;
+    if (saved && toTs(h.modified) > saved + 60000) return 'Aviso: la incidencia ha cambiado desde que la guardaste; vuelve a guardarla para que el agente vea lo último.';
+    return '';
+  }
+  async function copyRoutePrompt(doc) {
+    const { agentPath = '', promptTemplate = '', promptDocTemplate = '' } = await chrome.storage.local.get(['agentPath', 'promptTemplate', 'promptDocTemplate']).catch(() => ({}));
+    const text = SieCarpeta.prompt({ agentPath, folderName: saveState.folderName, folder: saveState.folder || fileSafe(h.number || 'incidencia'),
+      number: h.number, summary: h.summary, template: doc ? promptDocTemplate : promptTemplate, doc });
+    try { await navigator.clipboard.writeText(text); } catch (_) { toast('No se pudo copiar al portapapeles', { error: true }); return; }
+    flashCopied();
+    const note = staleNote();
+    toast(`${doc ? 'Prompt para documentar' : 'Prompt'} listo para pegar en el agente (${PASTE}).${note ? '\n' + note : ''}`, { ms: note ? 7000 : 3200, error: false });
+  }
+  function copyDoc() {
+    if (!isSaved()) {
+      toast('Para documentarla, guárdala primero: así el agente tendrá su carpeta y su clasificacion.md.', { action: 'Guardar', onAction: () => $('save').click() });
+      return;
+    }
+    copyRoutePrompt(true);
+  }
+  const copyInvestigate = () => (isSaved() ? copyRoutePrompt(false) : copyMarkdown(true));
+  const setCopyMenu = open => { copyMenu.hidden = !open; copyBtn.setAttribute('aria-expanded', String(open)); };
+  // Textos de ayuda según el caso, para que digan siempre qué se va a copiar.
+  function updateCopyTitles() {
+    const saved = isSaved();
+    if (closedNow) {
+      copyBtn.setAttribute('aria-haspopup', 'menu');
+      copyBtn.title = 'Elige qué prompt copiar: Documentar o Investigar';
+    } else {
+      copyBtn.removeAttribute('aria-haspopup');
+      copyBtn.title = saved ? 'Copia un prompt con la ruta de la incidencia guardada y sus adjuntos'
+        : 'Copia la incidencia en Markdown para pegarla en el agente (sin imágenes; guárdala para incluirlas)';
+    }
+    $('copy-doc-sub').textContent = saved ? 'Ya está finalizada: dejarla bien documentada' : 'Guárdala primero para documentarla';
+    $('copy-doc').title = saved ? 'Copia un prompt para documentar la incidencia guardada' : 'Hay que guardarla antes de documentarla';
+    $('copy-inv').title = saved ? 'Copia un prompt con la ruta de la incidencia guardada' : 'Copia la incidencia en Markdown (sin imágenes)';
+  }
+  copyBtn.addEventListener('click', ev => {
+    if (closedNow) { ev.stopPropagation(); setCopyMenu(copyMenu.hidden); if (!copyMenu.hidden) $('copy-doc').focus(); return; }
+    copyInvestigate();
+  });
+  $('copy-doc').addEventListener('click', () => { setCopyMenu(false); copyDoc(); });
+  $('copy-inv').addEventListener('click', () => { setCopyMenu(false); copyInvestigate(); });
+  document.addEventListener('click', ev => { if (!copyMenu.hidden && !ev.target.closest('.copy-wrap')) setCopyMenu(false); });
+  copyMenu.addEventListener('keydown', ev => {
+    const items = [...copyMenu.querySelectorAll('.opt-item')];
+    const i = items.indexOf(document.activeElement);
+    if (ev.key === 'ArrowDown') { ev.preventDefault(); items[(i + 1) % items.length].focus(); }
+    if (ev.key === 'ArrowUp') { ev.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+  });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !copyMenu.hidden) { ev.stopPropagation(); setCopyMenu(false); copyBtn.focus(); } }, true);
+  $('copy-md').addEventListener('click', () => copyMarkdown(false));
 
 
   // ---------- etiquetas ----------
@@ -929,7 +1001,7 @@
     $('md').textContent = buildText();
   }
   // Debajo de los botones: cuándo se guardó por última vez, o que hay cambios sin guardar.
-  const saveState = { savedAt: '', dirty: false, doc: null };
+  const saveState = { savedAt: '', dirty: false, doc: null, folderName: '', folder: '' };
   function renderSaveStatus() {
     const st = $('save-status');
     st.classList.toggle('dirty', saveState.dirty);
@@ -937,6 +1009,7 @@
     if (saveState.dirty) { st.textContent = 'Etiquetas sin guardar · pulsa Guardar'; st.hidden = false; }
     else if (saveState.savedAt) { st.textContent = saveState.savedAt === '?' ? 'Guardada en tu carpeta' : `Guardada el ${dayMonth(saveState.savedAt)}`; st.hidden = false; }
     else st.hidden = true;
+    updateCopyTitles();
     // Documentación externa (wiki, etc.), si el equipo la registra en clasificacion.md.
     const d = saveState.doc, ds = $('doc-status');
     ds.textContent = '';
@@ -988,7 +1061,7 @@
         tagState.known = r.known || [];
         if (r.current) setTags(r.current, { silent: true }); // lo guardado en la carpeta manda
         tagState.loaded = true;
-        if (r.savedAt) saveState.savedAt = r.savedAt;
+        if (r.savedAt) { saveState.savedAt = r.savedAt; saveState.folder = fileSafe(h.number || 'incidencia'); }
         saveState.doc = r.doc || null;
         renderSaveStatus();
         renderTags();
@@ -996,6 +1069,7 @@
     } catch (_) { /* sin carpeta: se suman al guardar */ }
   })();
   renderTags();
+  updateCopyTitles();
   tagColorsReady.then(renderTags); // con los colores ya asignados antes
   refreshRelated();
 
@@ -1121,8 +1195,9 @@
   }
 
   let toastTimer;
-  function toast(text, { action, onAction, error, ms = 2200 } = {}) {
+  function toast(text, { action, onAction, error, ms = 2200, bottom = false } = {}) {
     $('toast-text').textContent = text;
+    $('toast').classList.toggle('bottom', !!bottom); // abajo y centrado (solo «Copiar Markdown»)
     $('toast').classList.toggle('err', !!error);
     $('toast-ico-path').setAttribute('d', error ? 'M12 7v6M12 17v.5' : 'M5 12.5l4.5 4.5L19 7.5');
     const btn = $('toast-action');
@@ -1139,11 +1214,6 @@
     }, action ? Math.max(ms, 9000) : ms);
   }
 
-  async function promptFor(r) {
-    const { agentPath = '', promptTemplate = '' } = await chrome.storage.local.get(['agentPath', 'promptTemplate']);
-    return SieCarpeta.prompt({ agentPath, folderName: r.folderName, folder: r.folder, number: h.number, summary: h.summary, template: promptTemplate });
-  }
-  // Copia el prompt; si el navegador no lo permite (la ventana no tiene el foco), ofrece un botón.
   const PASTE = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘V' : 'Ctrl+V';
   // Tras guardar, las etiquetas del visor ya son las de la carpeta (incluidas las que añadió el agente).
   function afterSave(r) {
@@ -1152,23 +1222,18 @@
     chrome.storage.local.set({ [tagKey]: tagState.tags });
     saveState.dirty = false;
     saveState.savedAt = nowStamp();
+    if (r.folderName) saveState.folderName = r.folderName;
+    if (r.folder) saveState.folder = r.folder;
     if ('doc' in r) saveState.doc = r.doc || null;
     renderSaveStatus();
     return refreshRelated({ flash: true }); // el índice ya está al día: se buscan las relacionadas
   }
-  async function copyPrompt(r, savedText) {
+  // Guardar ya no copia nada: avisa de que el prompt se copia con «Copiar prompt».
+  async function savedNotice(r) {
     const nRel = await Promise.race([afterSave(r), new Promise(res => setTimeout(() => res(0), 1500))]);
     const relLine = nRel ? `\n${nRel === 1 ? '1 incidencia relacionada' : nRel + ' incidencias relacionadas'} en el lateral.` : '';
-    const text = await promptFor(r);
-    try {
-      await navigator.clipboard.writeText(text);
-      toast(`${savedText}\nPrompt listo para pegar en el agente (${PASTE}).${relLine}`, { ms: relLine ? 6000 : 4500 });
-    } catch (_) {
-      toast(savedText + relLine, { action: 'Copiar prompt', onAction: async () => {
-        await navigator.clipboard.writeText(text);
-        toast(`Prompt listo para pegar en el agente (${PASTE}).`);
-      } });
-    }
+    const next = closedNow ? 'Pulsa «Copiar prompt» y elige Documentar o Investigar.' : 'Pulsa «Copiar prompt» para pasársela al agente.';
+    toast(`Guardada en ${r.folderName}/${r.folder}.\n${next}${relLine}`, { ms: relLine ? 6500 : 5000 });
   }
 
   // ---------- transición suave de los botones (texto, ancho e icono) ----------
@@ -1217,7 +1282,7 @@
       const r = await chrome.runtime.sendMessage({ type: 'save-files', folder, files, meta });
       if (r && r.ok) {
         saveLabel('Guardado', true, 'ok');
-        await copyPrompt(r, `Guardado en ${r.folderName}/${r.folder}.`);
+        await savedNotice(r);
         refreshFolder();
         return;
       }
@@ -1243,7 +1308,7 @@
       const r = changes.lastSave.newValue;
       if (!r || r.token !== pendingToken) return;
       pendingToken = null;
-      if (r.ok) { saveLabel('Guardado', true, 'ok'); await copyPrompt(r, `Guardado en ${r.folderName}/${r.folder}.`); }
+      if (r.ok) { saveLabel('Guardado', true, 'ok'); await savedNotice(r); }
       else { saveLabel('Error al guardar', true, 'err'); toast('No se pudo guardar: ' + r.error, { error: true, ms: 5000 }); }
       refreshFolder();
     });
@@ -1262,6 +1327,7 @@
       const r = await chrome.runtime.sendMessage({ type: 'folder-status' });
       $('settings-folder').textContent = !r || !r.name ? 'Sin elegir' : r.name + (r.status === 'granted' ? '' : ' (sin permiso)');
       $('opt-folder').hidden = !(r && r.name); // «Ver guardadas» solo si hay carpeta elegida
+      if (r && r.name) saveState.folderName = r.name;
     } catch (_) { $('settings-folder').textContent = 'Sin elegir'; }
   }
   refreshFolder();

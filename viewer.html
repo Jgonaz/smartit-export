@@ -51,11 +51,23 @@
             </button>
           </div>
         </div>
-        <button type="button" id="copy" class="btn-card" title="Copia toda la incidencia en Markdown">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>
-          <span id="copy-label">Copiar</span>
-        </button>
-        <button type="button" id="save" class="btn-card" title="Guarda el Markdown y los adjuntos en tu carpeta y copia un prompt para el agente">
+        <div class="settings copy-wrap">
+          <button type="button" id="copy" class="btn-card" title="Copia la incidencia en Markdown para pegarla en tu agente">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>
+            <span id="copy-label">Copiar prompt</span>
+          </button>
+          <div id="copy-menu" class="opts-menu copy-menu card" role="menu" aria-label="Qué prompt copiar" hidden>
+            <button type="button" role="menuitem" id="copy-doc" class="opt-item opt-item-2">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+              <span><strong>Documentar</strong><small id="copy-doc-sub">Ya está finalizada: dejarla bien documentada</small></span>
+            </button>
+            <button type="button" role="menuitem" id="copy-inv" class="opt-item opt-item-2">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <span><strong>Investigar</strong><small>Analizarla y buscar incidencias parecidas</small></span>
+            </button>
+          </div>
+        </div>
+        <button type="button" id="save" class="btn-card" title="Guarda el Markdown y los adjuntos en tu carpeta">
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6"/><path d="M9.5 13.5L12 16l2.5-2.5"/></svg>
           <span id="save-label">Guardar</span>
         </button>
@@ -72,13 +84,13 @@
   <div class="wrap body-grid">
     <main class="main-col">
       <div class="toolbar">
-        <h2 class="mono-h">Conversación</h2>
-        <div class="controls">
-          <label class="check"><input type="checkbox" id="opt-system" checked> Eventos automáticos</label>
+        <div class="toolbar-title">
+          <h2 class="mono-h" id="main-title">Conversación</h2>
           <div class="seg" role="group" aria-label="Modo de vista">
             <button type="button" id="mode-view" aria-pressed="true">Vista</button>
             <button type="button" id="mode-md" aria-pressed="false">Markdown</button>
           </div>
+          <button type="button" id="copy-md" class="link-btn copy-md" title="Copia toda la incidencia en Markdown (sin imágenes)" hidden>Copiar Markdown</button>
         </div>
       </div>
       <div id="view">
@@ -181,7 +193,7 @@
       <h2 id="help-title" class="mono-h">Ayuda</h2>
       <p class="help-intro">Todo queda en tu equipo, en la carpeta que elegiste: no se envía nada a ningún servidor. Abre el apartado que te interese.</p>
 
-      <details class="help-sec" name="help">
+      <details class="help-sec" name="help" open>
         <summary>Qué se guarda y dónde</summary>
         <div class="help-body">
           <p>Al pulsar <strong>Guardar</strong>, la incidencia se escribe en tu carpeta (se cambia en <em>Opciones → Ajustes → Más ajustes…</em>):</p>
@@ -269,9 +281,16 @@
       </details>
 
       <details class="help-sec" name="help">
-        <summary>Prompt para el agente</summary>
+        <summary>Copiar prompt, Copiar Markdown y Guardar</summary>
         <div class="help-body">
-          <p>Al guardar se copia un prompt con las rutas de la incidencia para pegarlo en tu agente (Copilot CLI u otro). La ruta tal como la ve el agente (por ejemplo, desde WSL) y el texto del prompt se cambian en <em>Opciones → Ajustes → Más ajustes…</em>. «Copiar prompt» también está en el detalle de cada incidencia en <em>Ver guardadas</em>.</p>
+          <ul class="help-ul">
+            <li><strong>Guardar</strong> escribe la incidencia y sus adjuntos en tu carpeta. No copia nada: al terminar te recuerda que pulses «Copiar prompt».</li>
+            <li><strong>Copiar prompt</strong>, si la incidencia está guardada, copia un prompt con la ruta de su carpeta y sus adjuntos para pegarlo en tu agente (Copilot CLI u otro). Si no está guardada, copia la incidencia en Markdown (sin imágenes).</li>
+            <li>En las incidencias <strong>finalizadas</strong> (resueltas, cerradas, canceladas…) «Copiar prompt» pregunta qué quieres: <strong>Documentar</strong> (ya está resuelta: solo dejarla bien documentada; hay que guardarla antes) o <strong>Investigar</strong> (analizarla y buscar parecidas).</li>
+            <li>Si la versión guardada no está al día (etiquetas sin guardar o cambios en SmartIT después de guardarla), el prompt se copia igual y te avisa para que vuelvas a guardar.</li>
+            <li><strong>Copiar Markdown</strong> aparece en la vista Markdown, junto al título «Información», y copia siempre la incidencia completa.</li>
+          </ul>
+          <p>Los dos prompts (Investigar y Documentar) y la ruta tal como la ve tu agente (por ejemplo, desde WSL) se cambian en <em>Opciones → Ajustes → Más ajustes…</em>. «Copiar prompt» también está en el detalle de cada incidencia en <em>Ver guardadas</em>.</p>
         </div>
       </details>
 
