@@ -77,7 +77,7 @@
 
   const root = await SieCarpeta.get();
   if (!root) {
-    showState('Todavía no has elegido una carpeta', 'Pulsa «Guardar» en el visor de una incidencia o elígela en los ajustes de la extensión.',
+    showState('Todavía no has elegido una carpeta', 'Abre una incidencia en SmartIT con el icono de la extensión: te pedirá elegirla. También puedes hacerlo en los ajustes.',
       'Abrir los ajustes', () => chrome.runtime.openOptionsPage());
     return;
   }
@@ -119,7 +119,7 @@
 
   function renderTop() {
     if (!rows.length) {
-      showState('Todavía no hay incidencias guardadas', `Abre una incidencia en SmartIT, expórtala con el icono de la cabecera y pulsa «Guardar». Aparecerá aquí con su clasificación y sus archivos. Carpeta: ${root.name}.`);
+      showState('Todavía no hay incidencias guardadas', `Abre una incidencia en SmartIT con el icono de la extensión: se guarda sola y aparecerá aquí con su clasificación y sus archivos. Carpeta: ${root.name}.`);
       $('ex-lede').textContent = '';
       return false;
     }
@@ -204,7 +204,7 @@
       if (current === r.carpeta) b.setAttribute('aria-current', 'true');
       const row1 = el('span', 'ex-row1');
       row1.append(el('span', 'ex-num', r.incidencia), statusChip(r.estado));
-      if (r.guardada) row1.appendChild(el('span', 'ex-meta', `Guardada ${shortDate(r.guardada)}`));
+      if (r.guardada) row1.appendChild(el('span', 'ex-meta', `Actualizada ${shortDate(r.guardada)}`));
       b.append(row1, el('span', 'ex-title', r.titulo || '(sin título)'));
       const sub = [r.equipo, r.categoria].filter(Boolean).join(' · ');
       if (sub) b.appendChild(el('span', 'ex-sub', sub));
@@ -306,7 +306,7 @@
 
     const l1 = el('div', 'ex-dmeta');
     l1.append(el('span', 'ex-num', r.incidencia), statusChip(r.estado));
-    const dates = [r.abierta && `Abierta ${shortDate(r.abierta)}`, r.guardada && `Guardada ${shortDate(r.guardada)}`].filter(Boolean).join(' · ');
+    const dates = [r.abierta && `Abierta ${shortDate(r.abierta)}`, r.guardada && `Actualizada ${shortDate(r.guardada)}`].filter(Boolean).join(' · ');
     if (dates) l1.appendChild(el('span', 'ex-meta', dates));
     head.append(l1, el('h2', '', r.titulo || '(sin título)'));
     const acts = el('div', 'ex-actions');

@@ -11,11 +11,11 @@
   <main class="opt-wrap">
     <div class="inc-num">SmartIT – Exportar incidencia</div>
     <h1 id="opt-title">Ajustes</h1>
-    <p id="opt-lede" class="lede">Dónde se guardan las incidencias al pulsar «Guardar» en el visor.</p>
+    <p id="opt-lede" class="lede">Dónde se guardan las incidencias. El visor las guarda solo al abrirlas y al cambiar sus etiquetas.</p>
 
     <section class="card opt-card" style="--sh: var(--mint)">
       <h2 class="mono-h">Carpeta para guardar</h2>
-      <p class="muted small-p">Cada incidencia se guarda en una subcarpeta con su número, con <code>incidencia.md</code> y los adjuntos en <code>adjuntos/</code>. Si vuelves a guardarla, esos dos se actualizan con lo último; el resto de archivos de la carpeta no se tocan.</p>
+      <p class="muted small-p">Cada incidencia se guarda en una subcarpeta con su número, con <code>incidencia.md</code> y los adjuntos en <code>adjuntos/</code>. Cada vez que la abres o cambias sus etiquetas se actualiza con lo último; el resto de archivos de su carpeta no se tocan.</p>
       <div class="folder-row">
         <svg class="ico folder-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
         <div class="folder-info">
@@ -32,7 +32,7 @@
       <p id="msg" class="opt-msg" role="status" hidden></p>
       <div id="next-time" class="next-time" role="alert" hidden>
         <strong>Un paso más la próxima vez.</strong>
-        <p>Chrome pide confirmar el permiso una segunda vez. Al pulsar «Guardar» de nuevo se abrirá esta ventana: pulsa <strong>Dar permiso y guardar</strong> y elige <strong>«Permitir en cada visita»</strong>. Después ya no volverá a preguntar.</p>
+        <p>Chrome pide confirmar el permiso una segunda vez. La próxima vez que abras una incidencia, el panel de SmartIT te pedirá «Dar permiso»: elige <strong>«Permitir en cada visita»</strong> y ya no volverá a preguntar.</p>
         <button type="button" id="next-time-ok" class="btn-card">Entendido</button>
       </div>
     </section>

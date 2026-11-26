@@ -18,8 +18,11 @@
       <div id="tags" class="tags" aria-label="Etiquetas">
         <svg class="ico tags-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></svg>
         <span id="tag-list" class="tag-list"></span>
-        <input id="tag-input" class="tag-input" list="tag-options" placeholder="Añadir etiqueta" autocomplete="off" spellcheck="false" aria-label="Añadir etiqueta">
-        <datalist id="tag-options"></datalist>
+        <span class="tag-add">
+          <input id="tag-input" class="tag-input" placeholder="Añadir etiqueta" autocomplete="off" spellcheck="false" aria-label="Añadir etiqueta"
+            role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tag-sugg">
+          <ul id="tag-sugg" class="tag-sugg card" role="listbox" aria-label="Etiquetas que ya usas" hidden></ul>
+        </span>
       </div>
     </div>
     <div class="head-side">
@@ -31,6 +34,10 @@
         </button>
       </div>
       <div class="head-actions">
+        <button type="button" id="sync" class="btn-card sync-btn" data-state="idle" aria-label="Guardado automático" title="Guardado automático">
+          <svg class="ico sync-ico" viewBox="0 0 24 24" aria-hidden="true"><path class="sync-arrows" d="M20 12a8 8 0 0 1-13.7 5.7M4 12a8 8 0 0 1 13.7-5.7M17.7 3v3.3h-3.3M6.3 21v-3.3h3.3"/><circle class="sync-ring" cx="12" cy="12" r="9"/><path class="sync-check" d="M8 12.3l2.7 2.7L16.2 9.5"/><path class="sync-alert" d="M12 7.5v5.5M12 16.5v.5"/><path class="sync-slash" d="M4 4l16 16"/></svg>
+          <span class="sync-dot" aria-hidden="true"></span>
+        </button>
         <div class="settings opts">
           <button type="button" id="opts-btn" class="btn-card btn-opts" aria-haspopup="menu" aria-expanded="false" aria-controls="opts-menu">
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -67,12 +74,9 @@
             </button>
           </div>
         </div>
-        <button type="button" id="save" class="btn-card" title="Guarda el Markdown y los adjuntos en tu carpeta">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6"/><path d="M9.5 13.5L12 16l2.5-2.5"/></svg>
-          <span id="save-label">Guardar</span>
-        </button>
+
       </div>
-      <div id="save-status" class="save-status" role="status" aria-live="polite" hidden></div>
+      <div id="save-status" class="save-status sr-only" role="status" aria-live="polite"></div>
       <div id="doc-status" class="doc-status" hidden></div>
     </div>
   </header>
@@ -196,7 +200,7 @@
       <details class="help-sec" name="help" open>
         <summary>Qué se guarda y dónde</summary>
         <div class="help-body">
-          <p>Al pulsar <strong>Guardar</strong>, la incidencia se escribe en tu carpeta (se cambia en <em>Opciones → Ajustes → Más ajustes…</em>):</p>
+          <p>Cada incidencia que abres <strong>se guarda sola</strong> en tu carpeta, y se vuelve a guardar al cambiar sus etiquetas. La carpeta y la ruta para el agente se eligen la primera vez que usas la extensión (se cambian en <em>Opciones → Ajustes → Más ajustes…</em>):</p>
           <pre class="help-tree">carpeta elegida/
   indice.md          una fila por incidencia guardada
   indice.jsonl       lo mismo, una línea JSON por incidencia
@@ -219,8 +223,10 @@
       </details>
 
       <details class="help-sec" name="help">
-        <summary>Qué pasa al volver a guardar</summary>
+        <summary>Guardado automático</summary>
         <div class="help-body">
+          <p>El icono a la izquierda de «Opciones» dice cómo va: gira mientras guarda, muestra un check cuando está guardada y una alerta si algo falla (por ejemplo, si has movido la carpeta). Si algo falla se convierte en botón: al pulsarlo se reintenta o se abre lo necesario para elegir la carpeta o dar permiso.</p>
+          <p>Al abrir una incidencia:</p>
           <ul class="help-ul">
             <li><code>incidencia.md</code> <strong>se reescribe</strong> con lo que haya ahora en SmartIT.</li>
             <li><code>adjuntos/</code> <strong>se rehace</strong> para que coincida con la incidencia actual.</li>
@@ -228,27 +234,29 @@
             <li>Cualquier otro archivo que tú o tu agente dejéis en la carpeta de la incidencia (diagnóstico, notas…) <strong>no se toca</strong>.</li>
             <li>El índice se regenera leyendo todas las carpetas, así que siempre está completo, aunque guardéis varias personas en una carpeta compartida.</li>
           </ul>
+          <p>Al cambiar etiquetas solo se tocan <code>clasificacion.md</code> y el índice: se añade o quita la etiqueta sobre lo que haya en el archivo, sin pisar las que haya puesto tu agente.</p>
+          <p class="muted">Si eliges «Ahora no» al configurarla, la incidencia se ve pero no se guarda; puedes guardarla después pulsando el icono.</p>
         </div>
       </details>
 
       <details class="help-sec" name="help">
         <summary>Qué archivos puede tocar tu agente</summary>
         <div class="help-body">
-          <p>La extensión reescribe algunos archivos cada vez que guardas: lo que el agente cambie en ellos se pierde. Esto es lo que conviene indicarle:</p>
+          <p>La extensión reescribe algunos archivos cada vez que abres una incidencia: lo que el agente cambie en ellos se pierde. Esto es lo que conviene indicarle:</p>
           <div class="help-table-wrap">
             <table class="help-table help-table-3">
               <thead><tr><th>Archivo</th><th>Qué hace la extensión</th><th>Para el agente</th></tr></thead>
               <tbody>
-                <tr><td><code>indice.md</code>, <code>indice.jsonl</code></td><td>Los regenera enteros al guardar o eliminar</td><td>Solo lectura (para buscar parecidas)</td></tr>
-                <tr><td><code>INC…/incidencia.md</code></td><td>Lo reescribe entero en cada guardado</td><td>Solo lectura</td></tr>
-                <tr><td><code>INC…/adjuntos/</code></td><td>Rehace la carpeta en cada guardado: lo que no sea un adjunto de SmartIT se borra</td><td>Solo lectura; que no deje nada ahí</td></tr>
-                <tr><td><code>INC…/clasificacion.md</code></td><td>Solo actualiza las etiquetas</td><td>Puede editarlo; es donde debe escribir</td></tr>
+                <tr><td><code>indice.md</code>, <code>indice.jsonl</code></td><td>Los regenera enteros al guardar (al abrir o etiquetar) o eliminar</td><td>Solo lectura (para buscar parecidas)</td></tr>
+                <tr><td><code>INC…/incidencia.md</code></td><td>Lo reescribe entero cada vez que abres la incidencia</td><td>Solo lectura</td></tr>
+                <tr><td><code>INC…/adjuntos/</code></td><td>Rehace la carpeta cada vez que abres la incidencia: lo que no sea un adjunto de SmartIT se borra</td><td>Solo lectura; que no deje nada ahí</td></tr>
+                <tr><td><code>INC…/clasificacion.md</code></td><td>Solo añade o quita las etiquetas que cambies en el visor</td><td>Puede editarlo; es donde debe escribir</td></tr>
                 <tr><td><code>etiquetas.md</code></td><td>Solo añade etiquetas nuevas en «Sin describir», sin tocar lo escrito</td><td>Puede editarlo (descripciones, ordenarlas)</td></tr>
                 <tr><td>Otros archivos en <code>INC…/</code> (<code>diagnostico.md</code>…)</td><td>Nunca los toca</td><td>Libre</td></tr>
               </tbody>
             </table>
           </div>
-          <p class="muted">Si el agente cambia las etiquetas mientras tienes el visor abierto, recárgalo antes de guardar: al guardar mandan las etiquetas que muestra el visor.</p>
+          <p class="muted">Las etiquetas que añada el agente se conservan: el visor solo aplica lo que tú añades o quitas.</p>
         </div>
       </details>
 
@@ -302,13 +310,12 @@
       </details>
 
       <details class="help-sec" name="help">
-        <summary>Copiar prompt, Copiar Markdown y Guardar</summary>
+        <summary>Copiar prompt y Copiar Markdown</summary>
         <div class="help-body">
           <ul class="help-ul">
-            <li><strong>Guardar</strong> escribe la incidencia y sus adjuntos en tu carpeta. No copia nada: al terminar te recuerda que pulses «Copiar prompt».</li>
-            <li><strong>Copiar prompt</strong>, si la incidencia está guardada, copia un prompt con la ruta de su carpeta y sus adjuntos para pegarlo en tu agente (Copilot CLI u otro). Si no está guardada, copia la incidencia en Markdown (sin imágenes).</li>
-            <li>En las incidencias <strong>finalizadas</strong> (resueltas, cerradas, canceladas…) «Copiar prompt» pregunta qué quieres: <strong>Documentar</strong> (ya está resuelta: solo dejarla bien documentada; hay que guardarla antes) o <strong>Investigar</strong> (analizarla y buscar parecidas).</li>
-            <li>Si la versión guardada no está al día (etiquetas sin guardar o cambios en SmartIT después de guardarla), el prompt se copia igual y te avisa para que vuelvas a guardar.</li>
+            <li><strong>Copiar prompt</strong> copia un prompt con la ruta de la carpeta de la incidencia y sus adjuntos para pegarlo en tu agente (Copilot CLI u otro). Si no se ha podido guardar (o elegiste «Ahora no»), copia la incidencia en Markdown, sin imágenes, y te dice cómo guardarla.</li>
+            <li>En las incidencias <strong>finalizadas</strong> (resueltas, cerradas, canceladas…) «Copiar prompt» pregunta qué quieres: <strong>Documentar</strong> (ya está resuelta: solo dejarla bien documentada; tiene que estar guardada) o <strong>Investigar</strong> (analizarla y buscar parecidas).</li>
+            <li>Si aún se está guardando el último cambio, el prompt se copia igual y te avisa por si el agente tarda unos segundos en verlo.</li>
             <li><strong>Copiar Markdown</strong> aparece en la vista Markdown, junto al título «Información», y copia siempre la incidencia completa.</li>
           </ul>
           <p>Los dos prompts (Investigar y Documentar) y la ruta tal como la ve tu agente (por ejemplo, desde WSL) se cambian en <em>Opciones → Ajustes → Más ajustes…</em>. «Copiar prompt» también está en el detalle de cada incidencia en <em>Ver guardadas</em>.</p>

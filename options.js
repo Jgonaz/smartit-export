@@ -1,16 +1,20 @@
 (async () => {
   'use strict';
   const $ = id => document.getElementById(id);
-  // ?save=1: abierta desde «Guardar» sin carpeta (o sin permiso); al elegirla se termina de guardar.
-  const saveMode = new URLSearchParams(location.search).get('save'); // 'no-folder' | 'permission' | null
-  const fromSave = !!saveMode;
-  if (fromSave) document.body.classList.add('popup');
-  if (saveMode === 'permission') {
-    $('opt-title').textContent = 'Confirma el permiso';
-    $('opt-lede').innerHTML = 'Chrome solo da el primer permiso mientras está abierta esta ventana. Pulsa <strong>Dar permiso y guardar</strong> y elige <strong>«Permitir en cada visita»</strong>: no volverá a preguntar.';
-  } else if (fromSave) {
-    $('opt-title').textContent = 'Elige dónde guardar';
-    $('opt-lede').textContent = 'Elige la carpeta donde se guardarán las incidencias. Después, «Guardar» escribirá ahí directamente.';
+  // ?setup=1: ventanita abierta desde el panel de SmartIT (o desde el icono de sincronización del visor)
+  // para elegir la carpeta o dar permiso. Al conseguirlo, avisa con «folderReady» y se cierra sola.
+  const setupMode = new URLSearchParams(location.search).get('setup') === '1';
+  if (setupMode) {
+    document.body.classList.add('popup', 'setup');
+    $('opt-title').textContent = 'Carpeta para guardar';
+    $('opt-lede').textContent = 'Elige la carpeta donde se guardarán las incidencias. Al terminar, esta ventana se cierra sola y SmartIT sigue donde lo dejaste.';
+  }
+  const fromSave = setupMode; // ventanita: alto ajustado al contenido
+  async function setupDone() {
+    if (!setupMode) return;
+    await chrome.storage.local.set({ folderReady: Date.now() });
+    msg('Listo. Volviendo a SmartIT…', 'ok');
+    setTimeout(() => window.close(), 1600);
   }
 
   const msg = (text, kind) => { const m = $('msg'); m.hidden = !text; m.textContent = text || ''; m.className = 'opt-msg' + (kind ? ' ' + kind : ''); };
@@ -20,15 +24,15 @@
     const st = await SieCarpeta.status(handle);
     $('folder-name').textContent = handle ? handle.name : 'Ninguna carpeta elegida';
     $('folder-status').textContent = {
-      none: 'Al pulsar «Guardar» en el visor se te pedirá que elijas una.',
-      granted: 'Lista: «Guardar» escribe aquí directamente.',
+      none: 'Al abrir una incidencia se te pedirá que elijas una.',
+      granted: 'Lista: el visor guarda aquí cada incidencia que abres.',
       prompt: 'Chrome necesita que vuelvas a dar permiso para escribir en ella.',
       denied: 'Chrome ha bloqueado el permiso para escribir en ella. Elige otra carpeta o revisa los permisos del sitio.'
     }[st] || '';
     // El botón principal es lo que toca hacer ahora; el resto, como enlaces.
     const needGrant = st === 'prompt';
     $('grant').hidden = !needGrant;
-    $('grant').textContent = fromSave ? 'Dar permiso y guardar' : 'Dar permiso';
+    $('grant').textContent = 'Dar permiso';
     const pickLabel = handle ? 'Cambiar carpeta' : 'Elegir carpeta';
     if (needGrant) { $('pick').className = 'text-link'; $('pick').innerHTML = `<span class="u">${pickLabel}</span>`; }
     else { $('pick').className = 'btn-card'; $('pick').textContent = pickLabel; }
@@ -45,25 +49,6 @@
     const base = { agentPath: $('agent-path').value, folderName: handle && handle.name, folder: 'INC000000123456', number: 'INC000000123456', summary: 'Título de la incidencia' };
     $('prompt-preview').textContent = SieCarpeta.prompt({ ...base, template: $('prompt-template').value });
     $('prompt-doc-preview').textContent = SieCarpeta.prompt({ ...base, template: $('prompt-doc-template').value, doc: true });
-  }
-
-  // Termina el guardado que dejó pendiente el visor.
-  async function finishPending(handle) {
-    const { pendingSave } = await chrome.storage.local.get('pendingSave');
-    if (!pendingSave) return false;
-    msg('Guardando la incidencia…');
-    try {
-      const r = await SieCarpeta.write(handle, pendingSave.folder, pendingSave.files, pendingSave.meta);
-      await chrome.storage.local.remove('pendingSave');
-      await chrome.storage.local.set({ lastSave: { ok: true, token: pendingSave.token, at: Date.now(), ...r } });
-      msg(`Incidencia guardada en ${r.folderName}/${r.folder}.` + (fromSave ? ' Revisa la ruta para el agente y pulsa «Guardar cambios» para volver.' : ''), 'ok');
-      if ($('next-time').hidden) $('done').focus();
-      return true;
-    } catch (err) {
-      await chrome.storage.local.set({ lastSave: { ok: false, token: pendingSave.token, at: Date.now(), error: String(err.message || err) } });
-      msg('No se pudo guardar: ' + (err.message || err), 'err');
-      return false;
-    }
   }
 
   $('pick').addEventListener('click', async () => {
@@ -91,7 +76,8 @@
     }
     await render();
     if (st === 'granted') {
-      if (!(await finishPending(handle))) msg('Carpeta guardada.', 'ok');
+      msg('Carpeta guardada.', 'ok');
+      if (setupMode) { await setupDone(); return; }
       // Primer permiso: solo dura esta sesión. Se avisa de lo que pasará la próxima vez.
       $('next-time').hidden = false;
       $('pick-note').hidden = true; // el aviso ya lo explica
@@ -107,7 +93,7 @@
     if (!handle) return;
     const st = await handle.requestPermission({ mode: 'readwrite' });
     await render();
-    if (st === 'granted') { if (!(await finishPending(handle))) msg('Permiso concedido.', 'ok'); }
+    if (st === 'granted') { msg('Permiso concedido.', 'ok'); await setupDone(); }
   });
 
   $('forget').addEventListener('click', async () => {
@@ -160,7 +146,6 @@
   applyLook(await chrome.storage.local.get(['theme', 'style']));
 
   // «Guardar cambios»: guarda la ruta para el agente y cierra la ventana.
-  if (fromSave) $('foot-note').textContent = 'Al terminar, pulsa «Guardar cambios» para cerrar esta ventana.';
   $('done').addEventListener('click', async () => {
     clearTimeout(t); promptTimers.forEach(clearTimeout);
     await chrome.storage.local.set({ agentPath: $('agent-path').value.trim() });

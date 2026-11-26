@@ -24,6 +24,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     })().then(sendResponse, () => sendResponse({ ok: false }));
     return true;
   }
+  if (msg.type === 'tags-update') {
+    (async () => {
+      const h = await SieCarpeta.get();
+      if (!h) return { ok: false, reason: 'no-folder' };
+      if ((await SieCarpeta.status(h)) !== 'granted') return { ok: false, reason: 'permission', folderName: h.name };
+      return { ok: true, ...(await SieCarpeta.updateTags(h, msg.folder, { add: msg.add, remove: msg.remove })) };
+    })().then(sendResponse, err => sendResponse({ ok: false, reason: 'error', error: String(err && err.message || err) }));
+    return true;
+  }
   if (msg.type !== 'write') return;
   (async () => {
     const handle = await SieCarpeta.get();

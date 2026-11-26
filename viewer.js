@@ -4,7 +4,9 @@
   // Incrustado dentro de SmartIT (iframe) en vez de en una pestaña propia.
   const embedded = window.top !== window;
   if (embedded) document.body.classList.add('embedded');
-  const key = location.hash.slice(1);
+  // #<clave>[&nosave]: «nosave» cuando se eligió «Ahora no» en la configuración (no se guarda en la carpeta).
+  const [key, ...hashFlags] = location.hash.slice(1).split('&');
+  const noSave = hashFlags.includes('nosave');
   const store = await chrome.storage.local.get(key);
   const data = store[key];
   if (!data) {
@@ -886,7 +888,8 @@
   // Guardada: copia el prompt con las rutas de la carpeta. Sin guardar: copia el Markdown (sin imágenes).
   // Finalizada (resuelta, cerrada, cancelada…): primero se elige entre Documentar e Investigar.
   const copyBtn = $('copy'), copyMenu = $('copy-menu');
-  const isSaved = () => !!saveState.savedAt;
+  // Guardada y al día (o guardándose): el prompt puede apuntar a la carpeta.
+  const isSaved = () => !!saveState.savedAt && sync.state !== 'error' && sync.state !== 'off';
   function flashCopied() {
     morphButton(copyBtn, $('copy-label'), '¡Copiado!', 'ok');
     clearTimeout(copyBtn._resetT);
@@ -895,14 +898,13 @@
   async function copyMarkdown(fromPrompt) {
     try { await navigator.clipboard.writeText(buildText()); } catch (_) { toast('No se pudo copiar al portapapeles', { error: true }); return; }
     if (fromPrompt) flashCopied();
-    const what = fromPrompt ? 'Incidencia copiada en Markdown para pegarla en el agente' : 'Markdown copiado al portapapeles';
-    toast(attachments.length ? `${what}\nAviso: las imágenes no se copian (para eso, «Guardar»).` : what, { ms: attachments.length ? 5000 : 2600, bottom: !fromPrompt });
+    if (fromPrompt) { toast(`Incidencia copiada en Markdown (sin imágenes) para pegarla en el agente.\n${notSavedText()}`, { ms: 8000 }); return; }
+    const what = 'Markdown copiado al portapapeles';
+    toast(attachments.length ? `${what}\nAviso: las imágenes no se copian (están en la carpeta cuando la incidencia se guarda).` : what, { ms: attachments.length ? 5000 : 2600, bottom: !fromPrompt });
   }
-  // La copia guardada puede no estar al día: etiquetas sin guardar o cambios en SmartIT posteriores al guardado.
+  // Mientras se guarda un cambio, el agente podría leer la versión anterior durante unos segundos.
   function staleNote() {
-    if (saveState.dirty) return 'Aviso: hay etiquetas sin guardar; pulsa «Guardar» para que el agente las vea.';
-    const saved = saveState.savedAt !== '?' ? toTs(saveState.savedAt) : 0;
-    if (saved && toTs(h.modified) > saved + 60000) return 'Aviso: la incidencia ha cambiado desde que la guardaste; vuelve a guardarla para que el agente vea lo último.';
+    if (sync.state === 'saving') return 'Aviso: aún se está guardando el último cambio; si el agente no lo ve, espera unos segundos.';
     return '';
   }
   async function copyRoutePrompt(doc) {
@@ -914,14 +916,18 @@
     const note = staleNote();
     toast(`${doc ? 'Prompt para documentar' : 'Prompt'} listo para pegar en el agente (${PASTE}).${note ? '\n' + note : ''}`, { ms: note ? 7000 : 3200, error: false });
   }
+  // Sin guardar (se eligió «Ahora no» o falló el guardado), el agente no tendría carpeta: se explica qué hacer.
+  const notSavedText = () => noSave || sync.state === 'off'
+    ? 'Esta incidencia no se ha guardado (elegiste «Ahora no»). Pulsa el icono de guardado, a la izquierda de «Opciones», para elegir la carpeta y guardarla.'
+    : 'No se pudo guardar la incidencia. Pulsa el icono de guardado, a la izquierda de «Opciones», para reintentarlo.';
   function copyDoc() {
-    if (!isSaved()) {
-      toast('Para documentarla, guárdala primero: así el agente tendrá su carpeta y su clasificacion.md.', { action: 'Guardar', onAction: () => $('save').click() });
-      return;
-    }
+    if (!isSaved()) { toast('Para documentarla tiene que estar guardada. ' + notSavedText(), { error: true, ms: 7000 }); return; }
     copyRoutePrompt(true);
   }
-  const copyInvestigate = () => (isSaved() ? copyRoutePrompt(false) : copyMarkdown(true));
+  async function copyInvestigate() {
+    if (isSaved()) return copyRoutePrompt(false);
+    await copyMarkdown(true);
+  }
   const setCopyMenu = open => { copyMenu.hidden = !open; copyBtn.setAttribute('aria-expanded', String(open)); };
   // Textos de ayuda según el caso, para que digan siempre qué se va a copiar.
   function updateCopyTitles() {
@@ -932,9 +938,9 @@
     } else {
       copyBtn.removeAttribute('aria-haspopup');
       copyBtn.title = saved ? 'Copia un prompt con la ruta de la incidencia guardada y sus adjuntos'
-        : 'Copia la incidencia en Markdown para pegarla en el agente (sin imágenes; guárdala para incluirlas)';
+        : 'Copia la incidencia en Markdown para pegarla en el agente (sin imágenes: no está guardada)';
     }
-    $('copy-doc-sub').textContent = saved ? 'Ya está finalizada: dejarla bien documentada' : 'Guárdala primero para documentarla';
+    $('copy-doc-sub').textContent = saved ? 'Ya está finalizada: dejarla bien documentada' : 'Tiene que estar guardada (icono de guardado)';
     $('copy-doc').title = saved ? 'Copia un prompt para documentar la incidencia guardada' : 'Hay que guardarla antes de documentarla';
     $('copy-inv').title = saved ? 'Copia un prompt con la ruta de la incidencia guardada' : 'Copia la incidencia en Markdown (sin imágenes)';
   }
@@ -961,7 +967,7 @@
 
 
   // ---------- etiquetas ----------
-  // Se guardan con la incidencia (clasificacion.md) al pulsar «Guardar». Mientras, se recuerdan aquí.
+  // Se guardan solas en clasificacion.md (guardado automático). Mientras, se recuerdan aquí.
   // loaded: ya se leyeron las guardadas en la carpeta, así que la lista del visor manda al guardar.
   const tagKey = 'tags_' + (h.number || key);
   // Color pastel fijo por etiqueta (el mismo en todas las incidencias): se elige con un hash del nombre.
@@ -1000,20 +1006,36 @@
       chip.appendChild(x);
       list.appendChild(chip);
     });
-    const opts = $('tag-options');
-    opts.textContent = '';
-    tagState.known.filter(t => !tagState.tags.includes(t)).forEach(t => { const o = el('option'); o.value = t; opts.appendChild(o); });
+    if (!$('tag-sugg').hidden) renderSugg();
     $('md').textContent = buildText();
   }
-  // Debajo de los botones: cuándo se guardó por última vez, o que hay cambios sin guardar.
+  // Estado del guardado automático (icono a la izquierda de «Opciones») y de la documentación externa.
   const saveState = { savedAt: '', dirty: false, doc: null, folderName: '', folder: '' };
+  const sync = { state: noSave ? 'off' : 'idle', reason: '', at: 0, error: '' };
+  const ago = t => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'ahora mismo' : m === 1 ? 'hace 1 min' : m < 60 ? `hace ${m} min` : `a las ${new Date(t).getHours()}:${String(new Date(t).getMinutes()).padStart(2, '0')}`; };
+  function renderSync() {
+    const b = $('sync');
+    b.dataset.state = sync.state;
+    const where = `${saveState.folderName || 'tu carpeta'}/${saveState.folder || fileSafe(h.number || 'incidencia')}`;
+    const label = {
+      idle: 'Guardado automático',
+      saving: 'Guardando en tu carpeta…',
+      ok: `Guardada en ${where} ${ago(sync.at)}`,
+      error: sync.reason === 'no-folder' ? 'No hay carpeta elegida · pulsa para elegirla'
+        : sync.reason === 'permission' ? 'Falta el permiso de la carpeta · pulsa para darlo'
+          : `No se pudo guardar${sync.error ? ': ' + sync.error : ''} · pulsa para reintentar`,
+      off: 'No se guarda (elegiste «Ahora no») · pulsa para elegir la carpeta y guardarla'
+    }[sync.state];
+    b.title = label; b.setAttribute('aria-label', label);
+    // Solo se puede pulsar cuando hay que actuar: reintentar tras un error o guardar tras «Ahora no».
+    const actionable = sync.state === 'error' || sync.state === 'off';
+    if (actionable) b.removeAttribute('aria-disabled'); else b.setAttribute('aria-disabled', 'true');
+    b.tabIndex = actionable ? 0 : -1;
+    $('save-status').textContent = sync.state === 'ok' ? `Guardada en ${where}` : sync.state === 'error' ? label : '';
+  }
+  setInterval(() => { if (sync.state === 'ok') renderSync(); }, 30000); // «hace N min» al día
   function renderSaveStatus() {
-    const st = $('save-status');
-    st.classList.toggle('dirty', saveState.dirty);
-    $('save').classList.toggle('has-dot', saveState.dirty);
-    if (saveState.dirty) { st.textContent = 'Etiquetas sin guardar · pulsa Guardar'; st.hidden = false; }
-    else if (saveState.savedAt) { st.textContent = saveState.savedAt === '?' ? 'Guardada en tu carpeta' : `Guardada el ${dayMonth(saveState.savedAt)}`; st.hidden = false; }
-    else st.hidden = true;
+    renderSync();
     updateCopyTitles();
     // Documentación externa (wiki, etc.), si el equipo la registra en clasificacion.md.
     const d = saveState.doc, ds = $('doc-status');
@@ -1041,8 +1063,7 @@
     refreshRelated({ flash: !silent });
     if (!silent) {
       chrome.storage.local.set({ [tagKey]: tagState.tags });
-      saveState.dirty = true;
-      renderSaveStatus();
+      scheduleTagSync();
     }
   }
   const addFromInput = () => {
@@ -1051,21 +1072,73 @@
     setTags([...tagState.tags, ...v.split(',')]);
     $('tag-input').value = '';
   };
-  $('tag-input').addEventListener('keydown', ev => {
-    if (ev.key === 'Enter' || ev.key === ',') { ev.preventDefault(); addFromInput(); }
+  // ---------- sugerencias de etiquetas (lista propia, con el estilo del visor) ----------
+  const tagInput = $('tag-input'), sugg = $('tag-sugg');
+  let suggItems = [], suggActive = -1;
+  const normT = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  function renderSugg() {
+    const q = normT(tagInput.value);
+    const pool = tagState.known.filter(t => !tagState.tags.includes(t));
+    const starts = pool.filter(t => normT(t).startsWith(q)), inside = pool.filter(t => !normT(t).startsWith(q) && normT(t).includes(q));
+    suggItems = [...starts, ...inside].slice(0, 8).map(t => ({ tag: t }));
+    const typed = tagInput.value.trim();
+    const newTag = typed && SieCarpeta.normTag(typed.split(",")[0]);
+    if (newTag && !tagState.known.includes(newTag) && !tagState.tags.includes(newTag)) suggItems.push({ tag: newTag, create: true });
+    sugg.textContent = '';
+    if (!suggItems.length) { closeSugg(); return; }
+    if (suggActive >= suggItems.length) suggActive = suggItems.length - 1;
+    suggItems.forEach((it, i) => {
+      const li = el('li', 'tag-opt' + (it.create ? ' create' : '') + (i === suggActive ? ' on' : ''));
+      li.id = 'tag-opt-' + i;
+      li.setAttribute('role', 'option');
+      li.setAttribute('aria-selected', String(i === suggActive));
+      if (it.create) li.append(el('span', 'tag-opt-plus', '+'), document.createTextNode('Crear «' + it.tag + '»'));
+      else { const dot = el('span', 'tag-opt-dot'); dot.style.background = tagColor(it.tag); li.append(dot, document.createTextNode(it.tag)); }
+      li.addEventListener('mousedown', ev => ev.preventDefault()); // que no se pierda el foco del campo
+      li.addEventListener('click', () => pickSugg(i));
+      sugg.appendChild(li);
+    });
+    sugg.hidden = false;
+    tagInput.setAttribute('aria-expanded', 'true');
+    if (suggActive >= 0) tagInput.setAttribute('aria-activedescendant', 'tag-opt-' + suggActive); else tagInput.removeAttribute('aria-activedescendant');
+  }
+  function closeSugg() {
+    sugg.hidden = true; suggActive = -1;
+    tagInput.setAttribute('aria-expanded', 'false');
+    tagInput.removeAttribute('aria-activedescendant');
+  }
+  function pickSugg(i) {
+    const it = suggItems[i];
+    if (!it) return;
+    tagInput.value = '';
+    setTags([...tagState.tags, it.tag]);
+    suggActive = -1;
+    renderSugg();
+    tagInput.focus();
+  }
+  tagInput.addEventListener('keydown', ev => {
+    const open = !sugg.hidden && suggItems.length;
+    if (ev.key === 'ArrowDown') { ev.preventDefault(); if (!open) { renderSugg(); return; } suggActive = (suggActive + 1) % suggItems.length; renderSugg(); }
+    else if (ev.key === 'ArrowUp' && open) { ev.preventDefault(); suggActive = suggActive <= 0 ? suggItems.length - 1 : suggActive - 1; renderSugg(); }
+    else if (ev.key === 'Escape' && open) { ev.preventDefault(); ev.stopPropagation(); closeSugg(); }
+    else if (ev.key === 'Enter' || ev.key === ',') {
+      ev.preventDefault();
+      if (open && suggActive >= 0 && ev.key === 'Enter') pickSugg(suggActive);
+      else { addFromInput(); suggActive = -1; renderSugg(); }
+    }
     else if (ev.key === 'Backspace' && !ev.target.value && tagState.tags.length) setTags(tagState.tags.slice(0, -1));
   });
-  // Elegir una sugerencia de la lista la añade directamente.
-  $('tag-input').addEventListener('input', ev => { if (tagState.known.includes(ev.target.value) && ev.inputType !== 'insertText') addFromInput(); });
-  $('tag-input').addEventListener('blur', addFromInput);
-  (async () => {
+  tagInput.addEventListener('input', () => { suggActive = tagInput.value.trim() ? 0 : -1; renderSugg(); });
+  tagInput.addEventListener('focus', () => renderSugg());
+  tagInput.addEventListener('blur', () => { closeSugg(); addFromInput(); });
+  const tagsReady = (async () => {
     try { const c = await chrome.storage.local.get(tagKey); if (Array.isArray(c[tagKey])) setTags(c[tagKey], { silent: true }); } catch (_) {}
     try {
       const r = await chrome.runtime.sendMessage({ type: 'tags-info', folder: fileSafe(h.number || 'incidencia') });
       if (r && r.ok) {
         tagState.known = r.known || [];
         if (r.current) setTags(r.current, { silent: true }); // lo guardado en la carpeta manda
-        tagState.loaded = true;
+        tagState.loaded = r.current != null; // si ya estaba guardada, sus etiquetas mandan
         if (r.savedAt) { saveState.savedAt = r.savedAt; saveState.folder = fileSafe(h.number || 'incidencia'); }
         saveState.doc = r.doc || null;
         renderSaveStatus();
@@ -1080,7 +1153,7 @@
 
   // ---------- incidencias relacionadas (fase 3) ----------
   // Se calculan con el índice de la carpeta; se recalculan al cambiar las etiquetas y al guardar.
-  // Devuelve una promesa con el número de relacionadas (se usa en el aviso de «Guardar»).
+  // Devuelve una promesa con el número de relacionadas.
   // flash: resalta la tarjeta si los resultados han cambiado (al guardar o al tocar etiquetas).
   var relatedT, relatedWaiters, relatedSig; // var: refreshRelated() se puede llamar antes de llegar a esta línea
   function refreshRelated({ flash } = {}) {
@@ -1103,8 +1176,8 @@
       // Sin resultados se explica por qué, para que se sepa dónde aparecerán.
       const empty = text => { const li = el('li', 'rel-empty', text); list.appendChild(li); };
       if (!r || !r.ok) {
-        if (r && r.reason === 'permission') empty('Falta el permiso de la carpeta: pulsa «Guardar» para darlo y aquí aparecerán las incidencias parecidas.');
-        else empty('Aparecerán aquí cuando guardes incidencias con «Guardar»: se buscan entre las de tu carpeta.');
+        if (r && r.reason === 'permission') empty('Falta el permiso de la carpeta: pulsa el icono de guardado para darlo y aquí aparecerán las incidencias parecidas.');
+        else empty('Aparecerán aquí las incidencias parecidas de tu carpeta: cada incidencia que abres se guarda en ella.');
         return done(0);
       }
       if (!r.items || !r.items.length) {
@@ -1161,7 +1234,7 @@
   }
 
   // ---------- guardar en la carpeta elegida (markdown + adjuntos) ----------
-  const fileSafe = n => n.normalize('NFC').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'archivo';
+  function fileSafe(n) { return n.normalize('NFC').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'archivo'; }
   function filesToSave() {
     const folder = fileSafe(h.number || 'incidencia');
     const paths = new Map();
@@ -1229,22 +1302,15 @@
   // Tras guardar, las etiquetas del visor ya son las de la carpeta (incluidas las que añadió el agente).
   function afterSave(r) {
     tagState.loaded = true;
-    if (Array.isArray(r.tags)) { tagState.tags = [...new Set(r.tags)]; renderTags(); }
+    if (Array.isArray(r.tags)) { tagState.tags = [...new Set(r.tags)]; syncedTags = tagState.tags.slice(); renderTags(); }
     chrome.storage.local.set({ [tagKey]: tagState.tags });
-    saveState.dirty = false;
     saveState.savedAt = nowStamp();
     if (r.folderName) saveState.folderName = r.folderName;
     if (r.folder) saveState.folder = r.folder;
     if ('doc' in r) saveState.doc = r.doc || null;
+    sync.at = Date.now();
     renderSaveStatus();
-    return refreshRelated({ flash: true }); // el índice ya está al día: se buscan las relacionadas
-  }
-  // Guardar ya no copia nada: avisa de que el prompt se copia con «Copiar prompt».
-  async function savedNotice(r) {
-    const nRel = await Promise.race([afterSave(r), new Promise(res => setTimeout(() => res(0), 1500))]);
-    const relLine = nRel ? `\n${nRel === 1 ? '1 incidencia relacionada' : nRel + ' incidencias relacionadas'} en el lateral.` : '';
-    const next = closedNow ? 'Pulsa «Copiar prompt» y elige Documentar o Investigar.' : 'Pulsa «Copiar prompt» para pasársela al agente.';
-    toast(`Guardada en ${r.folderName}/${r.folder}.\n${next}${relLine}`, { ms: relLine ? 6500 : 5000 });
+    return refreshRelated(); // el índice ya está al día: se buscan las relacionadas
   }
 
   // ---------- transición suave de los botones (texto, ancho e icono) ----------
@@ -1278,59 +1344,93 @@
     label.classList.add('swap-in'); ico.classList.add('swap-in');
   }
 
-  let pendingToken = null, saveResetT;
-  const saveLabel = (t, reset, state) => {
-    clearTimeout(saveResetT);
-    morphButton($('save'), $('save-label'), t, state);
-    if (reset) saveResetT = setTimeout(() => { morphButton($('save'), $('save-label'), 'Guardar'); $('save').disabled = false; }, 2200);
-  };
-  $('save').onclick = async () => {
-    const btn = $('save');
-    btn.disabled = true;
-    saveLabel('Guardando…', false, 'busy');
+  // ---------- guardado automático ----------
+  // Se guarda la incidencia completa al abrirla (export nuevo) y al pulsar el icono; los cambios de
+  // etiquetas solo tocan clasificacion.md y el índice, aplicando lo añadido/quitado sobre lo que haya
+  // en el archivo (así no se pisan las etiquetas que haya puesto el agente mientras tanto).
+  let syncedTags = null;          // etiquetas tal como quedaron en la carpeta tras el último guardado
+  let saving = null;              // guardado completo en curso (promesa)
+  let tagSyncT = null;
+  const setSync = (state, extra = {}) => { Object.assign(sync, { reason: '', error: '' }, extra, { state }); renderSaveStatus(); };
+  async function saveAll() {
+    if (saving) return saving;
+    clearTimeout(tagSyncT);
+    setSync('saving');
+    saving = (async () => {
+      try {
+        const { folder, files, meta } = filesToSave();
+        const r = await chrome.runtime.sendMessage({ type: 'save-files', folder, files, meta });
+        if (r && r.ok) { await afterSave(r); setSync('ok'); refreshFolder(); return true; }
+        if (r && (r.reason === 'no-folder' || r.reason === 'permission')) { setSync('error', { reason: r.reason }); return false; }
+        throw new Error((r && r.error) || 'sin respuesta');
+      } catch (err) {
+        console.error('[SmartIT export]', err);
+        setSync('error', { reason: 'error', error: err.message || String(err) });
+        return false;
+      } finally { saving = null; }
+    })();
+    return saving;
+  }
+  function scheduleTagSync() {
+    if (noSave && sync.state === 'off') return; // «Ahora no»: las etiquetas se recuerdan en el navegador
+    setSync('saving'); // gira desde el primer momento hasta que queda guardado (o falla)
+    clearTimeout(tagSyncT);
+    tagSyncT = setTimeout(syncTags, 800);
+  }
+  async function syncTags() {
+    tagSyncT = null;
+    if (saving) { await saving; }
+    if (syncedTags == null) return saveAll(); // aún no estaba en la carpeta: guardado completo
+    const now = tagState.tags;
+    const add = now.filter(t => !syncedTags.includes(t)), remove = syncedTags.filter(t => !now.includes(t));
+    if (!add.length && !remove.length) { setSync(saveState.savedAt ? 'ok' : 'idle'); return; }
+    setSync('saving');
     try {
-      const { folder, files, meta } = filesToSave();
-      const r = await chrome.runtime.sendMessage({ type: 'save-files', folder, files, meta });
+      const r = await chrome.runtime.sendMessage({ type: 'tags-update', folder: fileSafe(h.number || 'incidencia'), add, remove });
+      if (r && r.ok && r.saved === false) return saveAll();
       if (r && r.ok) {
-        saveLabel('Guardado', true, 'ok');
-        await savedNotice(r);
-        refreshFolder();
+        syncedTags = (r.tags || now).slice();
+        // Si el agente cambió etiquetas mientras tanto, el visor se pone al día con las del archivo.
+        if (syncedTags.join('|') !== tagState.tags.join('|') && !tagSyncT) setTags(syncedTags, { silent: true });
+        if ('doc' in r) saveState.doc = r.doc || null;
+        sync.at = Date.now();
+        setSync('ok');
+        refreshRelated({ flash: true });
         return;
       }
-      if (r && (r.reason === 'no-folder' || r.reason === 'permission')) {
-        // Primera vez (o permiso caducado): se elige la carpeta en una ventanita y allí se termina de guardar.
-        pendingToken = crypto.randomUUID();
-        await chrome.storage.local.set({ pendingSave: { token: pendingToken, folder, files, meta } });
-        await chrome.runtime.sendMessage({ type: 'open-options', save: true, reason: r.reason });
-        saveLabel(r.reason === 'no-folder' ? 'Elige la carpeta…' : 'Da permiso…', false, 'busy');
-        return;
-      }
+      if (r && (r.reason === 'no-folder' || r.reason === 'permission')) { setSync('error', { reason: r.reason }); return; }
       throw new Error((r && r.error) || 'sin respuesta');
     } catch (err) {
       console.error('[SmartIT export]', err);
-      saveLabel('Error al guardar', true, 'err');
-      toast('No se pudo guardar: ' + (err.message || err), { error: true, ms: 5000 });
+      setSync('error', { reason: 'error', error: err.message || String(err) });
     }
-  };
-  // Resultado del guardado terminado en la ventana de ajustes.
+  }
+  // Pulsar el icono: si falta carpeta o permiso (o se eligió «Ahora no»), se abre la ventanita para
+  // elegirla; al terminar («folderReady») se guarda. Si no, se reintenta. Mientras todo va bien es solo un icono.
+  let waitingFolder = false;
+  $('sync').addEventListener('click', async () => {
+    if (sync.state !== 'error' && sync.state !== 'off') return; // solo icono mientras todo va bien
+    let st = null;
+    try { st = await chrome.runtime.sendMessage({ type: 'folder-status' }); } catch (_) {}
+    if (!st || st.status !== 'granted') {
+      waitingFolder = true;
+      try { await chrome.runtime.sendMessage({ type: 'open-options', setup: true }); } catch (_) {}
+      return;
+    }
+    if (sync.state === 'off') sync.state = 'idle';
+    saveAll();
+  });
   try {
-    chrome.storage.onChanged.addListener(async (changes, area) => {
-      if (area !== 'local' || !changes.lastSave || !pendingToken) return;
-      const r = changes.lastSave.newValue;
-      if (!r || r.token !== pendingToken) return;
-      pendingToken = null;
-      if (r.ok) { saveLabel('Guardado', true, 'ok'); await savedNotice(r); }
-      else { saveLabel('Error al guardar', true, 'err'); toast('No se pudo guardar: ' + r.error, { error: true, ms: 5000 }); }
-      refreshFolder();
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== 'local' || !changes.folderReady || !waitingFolder) return;
+      waitingFolder = false;
+      if (sync.state === 'off') sync.state = 'idle';
+      saveAll();
     });
   } catch (_) {}
-  // Si se cierra la ventana sin elegir carpeta, el botón vuelve a su estado al recuperar el foco.
-  window.addEventListener('focus', () => {
-    if (pendingToken && $('save').disabled) setTimeout(async () => {
-      const { pendingSave } = await chrome.storage.local.get('pendingSave');
-      if (pendingToken && pendingSave && pendingSave.token === pendingToken) saveLabel('Guardar', true);
-    }, 600);
-  });
+  // Al abrir: se espera a leer las etiquetas guardadas (para no pisarlas) y se guarda la incidencia.
+  if (!noSave) tagsReady.then(() => saveAll());
+  renderSaveStatus();
 
   async function refreshFolder() {
     // Se pregunta al documento oculto: el visor incrustado en SmartIT puede no ver la misma base de datos.

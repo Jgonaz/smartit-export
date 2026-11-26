@@ -118,6 +118,26 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .settings-menu .seg button { flex: 1; }
 
 /* estado del guardado: fecha del último guardado o cambios sin guardar */
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* Icono de guardado automático: girando (guardando), check (guardada), punto (cambio pendiente), alerta (error), apagado (sin carpeta). */
+.sync-btn { position: relative; width: 44px; padding: 0; justify-content: center; }
+/* Solo icono mientras todo va bien; botón únicamente cuando hay que actuar (error o «Ahora no»). */
+.btn-card.sync-btn:not([data-state="error"]):not([data-state="off"]) { background: transparent; border-color: transparent; box-shadow: none; transform: none; cursor: default; }
+.sync-btn .sync-ico { width: 20px; height: 20px; overflow: visible; }
+.sync-ico path, .sync-ico circle { transition: opacity .2s ease, transform .25s ease; transform-origin: 12px 12px; }
+.sync-ico .sync-check, .sync-ico .sync-alert, .sync-ico .sync-ring, .sync-ico .sync-slash { opacity: 0; transform: scale(.6); }
+.sync-btn[data-state="ok"] .sync-arrows, .sync-btn[data-state="error"] .sync-arrows { opacity: 0; transform: rotate(-90deg) scale(.6); }
+.sync-btn[data-state="ok"] .sync-check, .sync-btn[data-state="ok"] .sync-ring,
+.sync-btn[data-state="error"] .sync-alert, .sync-btn[data-state="error"] .sync-ring,
+.sync-btn[data-state="off"] .sync-slash { opacity: 1; transform: none; }
+.sync-btn[data-state="off"] .sync-arrows { opacity: .55; }
+.sync-btn[data-state="error"] { color: var(--wait); }
+.sync-btn[data-state="off"] { color: var(--grey); }
+.sync-btn[data-state="saving"] .sync-ico { animation: sync-spin 1s linear infinite; }
+@keyframes sync-spin { to { transform: rotate(360deg); } }
+.sync-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--wait); box-shadow: 0 0 0 2px var(--card); opacity: 0; transform: scale(.4); transition: opacity .2s ease, transform .2s ease; }
+.sync-btn[data-state="pending"] .sync-dot { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .sync-btn[data-state="saving"] .sync-ico { animation-duration: 3s; } }
 .save-status { align-self: flex-end; margin-top: -4px; font-size: 12.5px; color: var(--grey); text-align: right; animation: tag-in .25s ease; }
 .doc-status { align-self: flex-end; margin-top: -10px; font-size: 12.5px; color: var(--grey); text-align: right; animation: tag-in .25s ease; }
 .doc-status.done { color: var(--ink); }
@@ -141,6 +161,20 @@ html[data-style="classic"] .btn-card.has-dot::after { background: #fff; box-shad
 .tag button:hover { background: rgba(22, 22, 22, .1); color: #161616; }
 html[data-theme="dark"] .tag { border-color: transparent; background: color-mix(in srgb, var(--tc, #fff) 80%, #fff); }
 .tag-input { height: 26px; field-sizing: content; min-width: 14ch; max-width: 260px; padding: 0 10px; border: var(--bw) dashed var(--grey); border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; }
+.tag-add { position: relative; display: inline-flex; }
+.tag-sugg { position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; min-width: 220px; max-width: 320px; max-height: 300px; overflow-y: auto; margin: 0; padding: 6px; list-style: none; --sh: var(--lilac); box-shadow: 5px 5px 0 var(--sh); transform-origin: top left; animation: menu-in .16s cubic-bezier(.2,.8,.2,1); }
+.tag-opt { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 10px; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--ink); cursor: pointer; overflow-wrap: anywhere; }
+.tag-opt:hover, .tag-opt.on { background: var(--hair); }
+.tag-opt.on { font-weight: 700; }
+.tag-opt-dot { flex: none; width: 12px; height: 12px; border-radius: 50%; border: var(--bw) solid var(--border); }
+.tag-opt-plus { flex: none; width: 14px; text-align: center; font-weight: 700; color: var(--grey); }
+.tag-opt.create { color: var(--grey); }
+.tag-opt.create.on, .tag-opt.create:hover { color: var(--ink); }
+.tag-opt.create:not(:first-child) { margin-top: 4px; border-top: 1px solid var(--hair); border-radius: 0 0 8px 8px; }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+html[data-style="classic"] .tag-sugg { box-shadow: var(--soft); border: 1px solid var(--border); }
+html[data-style="classic"] .tag-opt-dot { border: 0; }
+html[data-style="classic"] .tag-opt.on { background: var(--accent-bg, var(--hair)); color: var(--accent); }
 .tag-input:focus { outline: none; border-style: solid; border-color: var(--ink); background: var(--card); }
 html[data-style="classic"] .tag { border: 0; background: color-mix(in srgb, var(--tc) 50%, var(--card)); color: #2A2D35; font-weight: 500; }
 html[data-style="classic"][data-theme="dark"] .tag { background: color-mix(in srgb, var(--tc) 92%, #000); color: #14161B; }
@@ -540,3 +574,10 @@ html[data-style="classic"] .to-top.show:hover { transform: translateY(-2px); box
 html[data-style="classic"] .to-top.show:active { transform: none; box-shadow: 0 2px 8px rgba(20, 22, 27, .12); }
 html[data-style="classic"] .settings-menu, html[data-style="classic"] .origin-pop, html[data-style="classic"] .toast { border-width: 1px; border-color: var(--border); box-shadow: 0 10px 30px rgba(20, 22, 27, .12); }
 html[data-style="classic"][data-theme="dark"] .settings-menu, html[data-style="classic"][data-theme="dark"] .origin-pop, html[data-style="classic"][data-theme="dark"] .toast { box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+
+/* Icono de guardado en Clásico (al final para ganar a las reglas de .btn-card). */
+html[data-style="classic"] .btn-card.sync-btn, html[data-style="classic"][data-theme="dark"] .btn-card.sync-btn { background: var(--card); color: var(--ink); border: 1px solid var(--border); box-shadow: var(--soft, none); }
+html[data-style="classic"] .btn-card.sync-btn:hover { background: var(--hair); }
+html[data-style="classic"] .btn-card.sync-btn:not([data-state="error"]):not([data-state="off"]), html[data-style="classic"][data-theme="dark"] .btn-card.sync-btn:not([data-state="error"]):not([data-state="off"]) { background: transparent; border-color: transparent; box-shadow: none; }
+html[data-style="classic"] .btn-card.sync-btn[data-state="error"] { color: var(--wait); border-color: var(--wait); }
+html[data-style="classic"] .btn-card.sync-btn[data-state="off"] { color: var(--grey); }

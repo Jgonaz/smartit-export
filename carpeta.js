@@ -293,6 +293,29 @@ const SieCarpeta = (() => {
     return { folderName: handle.name, folder: safe(folder), tags, doc: docOf(clas), indexed: rows ? rows.length : null };
   }
 
+  // Cambio de etiquetas desde el visor (guardado automático): se aplica el cambio (añadir/quitar) sobre
+  // lo que haya ahora en clasificacion.md, sin sustituir la lista, para no pisar las que haya añadido
+  // el agente mientras el visor estaba abierto. No reescribe incidencia.md (solo su lista de etiquetas,
+  // que el índice suma) ni los adjuntos. Si la incidencia aún no está en la carpeta: { saved: false }.
+  async function updateTags(handle, folder, { add = [], remove = [] } = {}) {
+    let base;
+    try { base = await handle.getDirectoryHandle(safe(folder)); } catch (_) { return { saved: false }; }
+    const incText = await readText(base, 'incidencia.md');
+    if (incText == null) return { saved: false };
+    const prev = FM.parse((await readText(base, 'clasificacion.md')) || '');
+    const out = new Set(uniqTags(remove));
+    const tags = uniqTags([...uniqTags(prev.data.etiquetas || []).filter(t => !out.has(t)), ...uniqTags(add)]);
+    const clas = { ...prev.data, etiquetas: tags };
+    if (!('causa' in clas)) clas.causa = '';
+    if (!('solucion' in clas)) clas.solucion = '';
+    const clasBody = prev.body.trim() ? prev.body : '\nNotas libres sobre la causa y la solución (las mantiene la persona o el agente; la extensión no las borra).\n';
+    await writeText(base, 'clasificacion.md', FM.stringify(clas, true) + clasBody);
+    const inc = FM.parse(incText);
+    if (Object.keys(inc.data).length) await writeText(base, 'incidencia.md', FM.stringify({ ...inc.data, etiquetas: tags }) + '\n' + inc.body.replace(/^\n/, ''));
+    try { await addToVocab(handle, tags); await rebuildIndex(handle); } catch (err) { console.warn('[SmartIT export] índice', err); }
+    return { saved: true, folderName: handle.name, folder: safe(folder), tags, doc: docOf(clas) };
+  }
+
   // Prompts que copia «Copiar prompt» (investigar y documentar). Las plantillas se editan en los ajustes; variables:
   // {incidencia} {titulo} {carpeta} (ruta de la incidencia) {raiz} (ruta de la carpeta elegida).
   const DEFAULT_PROMPT = 'Analiza la incidencia {incidencia} – {titulo}.\n' +
@@ -315,5 +338,5 @@ const SieCarpeta = (() => {
     return text.replace(/ – \./g, '.').replace(/[ \t]+\n/g, '\n').trim();
   }
 
-  return { get, set, clear, status, write, remove, safe, prompt, DEFAULT_PROMPT, DEFAULT_DOC_PROMPT, tagsInfo, related, rebuildIndex, readText, normTag, FM };
+  return { get, set, clear, status, write, updateTags, remove, safe, prompt, DEFAULT_PROMPT, DEFAULT_DOC_PROMPT, tagsInfo, related, rebuildIndex, readText, normTag, FM };
 })();

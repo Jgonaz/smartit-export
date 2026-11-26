@@ -94,7 +94,7 @@ async function ensureOffscreen() {
   });
 }
 
-// Ventana de elegir carpeta: todo el alto de la ventana desde la que se pulsó «Guardar», centrada.
+// Ventana de elegir carpeta: todo el alto de la ventana de SmartIT, centrada.
 async function openFolderWindow(url, sender) {
   const W = 780;
   let geo = {};
@@ -114,6 +114,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       await ensureOffscreen();
       return chrome.runtime.sendMessage({ target: 'offscreen', type: 'write', folder: msg.folder, files: msg.files, meta: msg.meta });
     })().then(sendResponse, err => sendResponse({ ok: false, reason: 'error', error: String(err && err.message || err) }));
+    return true;
+  }
+  if (msg.type === 'tags-update') {
+    ensureOffscreen().then(() => chrome.runtime.sendMessage({ target: 'offscreen', type: 'tags-update', folder: msg.folder, add: msg.add, remove: msg.remove }))
+      .then(sendResponse, err => sendResponse({ ok: false, reason: 'error', error: String(err && err.message || err) }));
     return true;
   }
   if (msg.type === 'related') {
@@ -136,9 +141,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   if (msg.type === 'open-options') {
-    // Ventana pequeña para elegir la carpeta (el selector de Chrome no se abre desde el visor incrustado).
-    const url = chrome.runtime.getURL('options.html') + (msg.save ? '?save=' + (msg.reason || 'no-folder') : '');
-    (msg.save ? openFolderWindow(url, sender) : chrome.runtime.openOptionsPage()).then(() => sendResponse({ ok: true }), err => sendResponse({ ok: false, error: String(err) }));
+    // Ventana pequeña para elegir la carpeta o dar permiso (el selector de Chrome no se abre dentro de SmartIT).
+    const url = chrome.runtime.getURL('options.html') + (msg.setup ? '?setup=1' : '');
+    (msg.setup ? openFolderWindow(url, sender) : chrome.runtime.openOptionsPage()).then(() => sendResponse({ ok: true }), err => sendResponse({ ok: false, error: String(err) }));
     return true;
   }
 });
