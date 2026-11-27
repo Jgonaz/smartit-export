@@ -396,6 +396,23 @@ html[data-style="classic"] a.link-btn, html[data-style="classic"] .link-btn { co
 .opt-item { display: flex; align-items: center; gap: 10px; width: 100%; height: 38px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-weight: 600; text-align: left; cursor: pointer; white-space: nowrap; }
 .opt-item:hover, .opt-item:focus-visible, .opt-item[aria-expanded="true"] { background: var(--hair); outline: none; }
 .opt-item .ico { width: 17px; height: 17px; color: var(--grey); }
+.opts-menu .opt-danger { margin-top: 6px; padding-top: 2px; border-top: 1px solid var(--hair); border-radius: 0 0 8px 8px; color: #B23A1B; }
+.opts-menu .opt-danger .ico { color: #B23A1B; }
+.opts-menu .opt-danger:hover, .opts-menu .opt-danger:focus-visible { background: #FDE2D9; color: #8F2D14; }
+html[data-theme="dark"] .opts-menu .opt-danger, html[data-theme="dark"] .opts-menu .opt-danger .ico { color: #F5A28A; }
+html[data-theme="dark"] .opts-menu .opt-danger:hover, html[data-theme="dark"] .opts-menu .opt-danger:focus-visible { background: rgba(245, 162, 138, .16); color: #F8B9A6; }
+.opts-menu .opt-danger:disabled { opacity: .5; cursor: progress; }
+.help-card.del-card { width: min(500px, 100%); margin-top: 10vh; --sh: #F5A28A; }
+.del-card p { margin: 0 0 12px; }
+.del-list { margin: 0 0 12px; padding: 10px 14px 10px 30px; border-radius: 8px; background: var(--hair); font-size: 13.5px; max-height: 180px; overflow-y: auto; }
+.del-warn { font-weight: 700; color: var(--wait); font-size: 13.5px; }
+.del-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+.del-foot .btn-card { height: 40px; }
+.btn-card.del-ok { background: #FDE2D9; border-color: #B23A1B; color: #8F2D14; box-shadow: 3px 3px 0 #B23A1B; }
+.btn-card.del-ok:disabled { opacity: .6; cursor: progress; }
+html[data-theme="dark"] .btn-card.del-ok { background: rgba(245, 162, 138, .18); border-color: #F5A28A; color: #F8B9A6; box-shadow: 3px 3px 0 #F5A28A; }
+.nosave-note { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; padding: 4px 10px; border-radius: 999px; background: var(--hair); color: var(--grey); }
+.nosave-note::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; }
 .copy-menu { left: auto; right: 0; min-width: 300px; transform-origin: top right; }
 .opt-item-2 { height: auto; padding: 9px 10px; align-items: flex-start; white-space: normal; }
 .opt-item-2 .ico { margin-top: 2px; flex: none; }
@@ -595,3 +612,6 @@ html[data-style="classic"] .btn-card.sync-btn:hover { background: var(--hair); }
 html[data-style="classic"] .btn-card.sync-btn:not([data-state="error"]):not([data-state="off"]), html[data-style="classic"][data-theme="dark"] .btn-card.sync-btn:not([data-state="error"]):not([data-state="off"]) { background: transparent; border-color: transparent; box-shadow: none; }
 html[data-style="classic"] .btn-card.sync-btn[data-state="error"] { color: var(--wait); border-color: var(--wait); }
 html[data-style="classic"] .btn-card.sync-btn[data-state="off"] { color: var(--grey); }
+html[data-style="classic"] .btn-card.del-ok, html[data-style="classic"][data-theme="dark"] .btn-card.del-ok { background: var(--card); color: var(--wait); border: 1px solid var(--wait); box-shadow: none; }
+html[data-style="classic"] .btn-card.del-ok:hover { background: #FDE2D9; }
+html[data-style="classic"] .del-foot .btn-card:not(.del-ok), html[data-style="classic"][data-theme="dark"] .del-foot .btn-card:not(.del-ok) { background: var(--card); color: var(--ink); border: 1px solid var(--border); }

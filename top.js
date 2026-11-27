@@ -460,6 +460,8 @@
       overlay.classList.add('show');
       setTimeout(() => cache && cache.iframe.classList.add('on'), T(120));
     });
+    // Al reabrirlo desde la caché, el visor recalcula sus Relacionadas (pueden haber cambiado).
+    try { cache.iframe.contentWindow.postMessage({ sie: 'viewer-shown' }, '*'); } catch (_) {}
   }
 
   // ---------- incidencias guardadas abiertas encima («Ver aquí» en Relacionadas) ----------
@@ -491,7 +493,7 @@
     const f = stack.pop();
     if (!f) return;
     const prev = topViewer();
-    if (prev) { prev.inert = false; prev.focus(); }
+    if (prev) { prev.inert = false; prev.focus(); try { prev.contentWindow.postMessage({ sie: 'viewer-shown' }, '*'); } catch (_) {} }
     f.classList.remove('on');
     setTimeout(() => f.remove(), T(320));
   }
@@ -536,7 +538,14 @@
     if (fromViewer) {
       const top = topViewer();
       const isTop = top && e.source === top.contentWindow;
-      if (e.data.sie === 'viewer-close' && state === 'open') { if (stack.length) { if (isTop) popSaved(); } else close(); }
+      if (e.data.sie === 'viewer-close' && state === 'open') {
+        if (stack.length) { if (isTop) popSaved(); }
+        else {
+          // «Eliminar de la carpeta»: no se conserva el visor; al pulsar el icono se exporta de nuevo.
+          if (e.data.discard && cache) { const f = cache.iframe; cache = null; setTimeout(() => f.remove(), T(340)); }
+          close();
+        }
+      }
       if (e.data.sie === 'viewer-back' && isTop && stack.length) popSaved();
       if (e.data.sie === 'open-saved' && isTop && state === 'open' && typeof e.data.folder === 'string') pushSaved(e.data.folder, String(e.data.back || ''));
       if (e.data.sie === 'update-dismissed') checkUpdate();

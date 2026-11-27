@@ -885,7 +885,7 @@
       if (ev.key !== 'Escape') return;
       const modalOpen = !$('modal').hidden;
       const popOpen = !pop.hidden;
-      const menuOpen = !$('opts-menu').hidden || !$('copy-menu').hidden || !$('help').hidden || !$('settings-modal').hidden;
+      const menuOpen = !$('opts-menu').hidden || !$('copy-menu').hidden || !$('help').hidden || !$('settings-modal').hidden || !$('del-modal').hidden;
       if (!modalOpen && !popOpen && !menuOpen && !(document.activeElement && document.activeElement.id === 'tag-input' && !$('tag-sugg').hidden)) {
         if (backLabel) goBack(); else parent.postMessage({ sie: 'viewer-close' }, '*');
       }
@@ -949,7 +949,9 @@
     toast(`${doc ? 'Prompt para documentar' : 'Prompt'} listo para pegar en el agente (${PASTE}).${note ? '\n' + note : ''}`, { ms: note ? 7000 : 3200, error: false });
   }
   // Sin guardar (se eligió «Ahora no» o falló el guardado), el agente no tendría carpeta: se explica qué hacer.
-  const notSavedText = () => noSave || sync.state === 'off'
+  const notSavedText = () => sync.reason === 'excluded'
+    ? 'Esta incidencia no se guarda porque la eliminaste de tu carpeta. Pulsa el icono de guardado, a la izquierda de «Opciones», para volver a guardarla.'
+    : noSave || sync.state === 'off'
     ? 'Esta incidencia no se ha guardado (elegiste «Ahora no»). Pulsa el icono de guardado, a la izquierda de «Opciones», para elegir la carpeta y guardarla.'
     : 'No se pudo guardar la incidencia. Pulsa el icono de guardado, a la izquierda de «Opciones», para reintentarlo.';
   function copyDoc() {
@@ -1061,8 +1063,13 @@
       error: sync.reason === 'no-folder' ? 'No hay carpeta elegida · pulsa para elegirla'
         : sync.reason === 'permission' ? 'Falta el permiso de la carpeta · pulsa para darlo'
           : `No se pudo guardar${sync.error ? ': ' + sync.error : ''} · pulsa para reintentar`,
-      off: 'No se guarda (elegiste «Ahora no») · pulsa para elegir la carpeta y guardarla'
+      off: sync.reason === 'excluded' ? 'No se guarda (la eliminaste de tu carpeta) · pulsa para volver a guardarla'
+        : 'No se guarda (elegiste «Ahora no») · pulsa para elegir la carpeta y guardarla'
     }[sync.state];
+    // «Eliminar de la carpeta» solo cuando está guardada (y no mientras se guarda).
+    const del = $('opt-delete');
+    del.hidden = !(saveState.savedAt && sync.state !== 'off');
+    del.disabled = sync.state === 'saving';
     b.title = label; b.setAttribute('aria-label', label);
     // Solo se puede pulsar cuando hay que actuar: reintentar tras un error o guardar tras «Ahora no».
     const actionable = sync.state === 'error' || sync.state === 'off';
@@ -1417,6 +1424,40 @@
     note.hidden = false;
   }
 
+  // ---------- incidencias que no se guardan (eliminadas de la carpeta desde el visor) ----------
+  const NOSAVE_KEY = 'noSaveList';
+  const exclusionReady = savedMode || noSave ? Promise.resolve(null)
+    : chrome.storage.local.get(NOSAVE_KEY).then(r => (r[NOSAVE_KEY] || {})[h.number] || null).catch(() => null);
+  async function forgetExclusion() {
+    try {
+      const r = await chrome.storage.local.get(NOSAVE_KEY);
+      const list = r[NOSAVE_KEY] || {};
+      if (h.number in list) { delete list[h.number]; await chrome.storage.local.set({ [NOSAVE_KEY]: list }); }
+    } catch (_) {}
+    $('nosave-note').hidden = true;
+  }
+  async function rememberExclusion() {
+    try {
+      const r = await chrome.storage.local.get(NOSAVE_KEY);
+      const list = r[NOSAVE_KEY] || {};
+      list[h.number] = { at: Date.now() };
+      await chrome.storage.local.set({ [NOSAVE_KEY]: list });
+    } catch (_) {}
+  }
+
+  // ---------- Relacionadas siempre al día ----------
+  // Tras cada guardado, cambio de etiquetas o eliminación se deja una marca; los demás visores abiertos
+  // (en cualquier pestaña) y «Ver guardadas» la ven y se actualizan. También al volver a mostrarse este
+  // visor (al reabrirlo desde la caché o al volver con la flecha).
+  const VID = Math.random().toString(36).slice(2);
+  const announceIndex = () => chrome.storage.local.set({ indexUpdatedAt: { t: Date.now(), by: VID } }).catch(() => {});
+  try {
+    chrome.storage.onChanged.addListener((ch, area) => {
+      if (area === 'local' && ch.indexUpdatedAt && ch.indexUpdatedAt.newValue && ch.indexUpdatedAt.newValue.by !== VID) refreshRelated({ flash: true });
+    });
+  } catch (_) {}
+  window.addEventListener('message', e => { if (e.source === parent && e.data && e.data.sie === 'viewer-shown') refreshRelated({ flash: true }); });
+
   // ---------- guardado automático ----------
   // Se guarda la incidencia completa al abrirla (export nuevo) y al pulsar el icono; los cambios de
   // etiquetas solo tocan clasificacion.md y el índice, aplicando lo añadido/quitado sobre lo que haya
@@ -1433,7 +1474,7 @@
       try {
         const { folder, files, meta } = filesToSave();
         const r = await chrome.runtime.sendMessage({ type: 'save-files', folder, files, meta });
-        if (r && r.ok) { await afterSave(r); setSync('ok'); refreshFolder(); return true; }
+        if (r && r.ok) { await afterSave(r); setSync('ok'); refreshFolder(); announceIndex(); return true; }
         if (r && (r.reason === 'no-folder' || r.reason === 'permission')) { setSync('error', { reason: r.reason }); return false; }
         throw new Error((r && r.error) || 'sin respuesta');
       } catch (err) {
@@ -1445,7 +1486,7 @@
     return saving;
   }
   function scheduleTagSync() {
-    if (noSave && sync.state === 'off') return; // «Ahora no»: las etiquetas se recuerdan en el navegador
+    if (sync.state === 'off') return; // «Ahora no» o eliminada: las etiquetas se recuerdan en el navegador
     setSync('saving'); // gira desde el primer momento hasta que queda guardado (o falla)
     clearTimeout(tagSyncT);
     tagSyncT = setTimeout(syncTags, 800);
@@ -1469,6 +1510,7 @@
         sync.at = Date.now();
         setSync('ok');
         refreshRelated({ flash: true });
+        announceIndex();
         return;
       }
       if (r && (r.reason === 'no-folder' || r.reason === 'permission')) { setSync('error', { reason: r.reason }); return; }
@@ -1490,14 +1532,14 @@
       try { await chrome.runtime.sendMessage({ type: 'open-options', setup: true }); } catch (_) {}
       return;
     }
-    if (sync.state === 'off') sync.state = 'idle';
+    if (sync.state === 'off') { sync.state = 'idle'; await forgetExclusion(); }
     saveAll();
   });
   try {
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== 'local' || !changes.folderReady || !waitingFolder) return;
       waitingFolder = false;
-      if (sync.state === 'off') sync.state = 'idle';
+      if (sync.state === 'off') { sync.state = 'idle'; forgetExclusion(); }
       saveAll();
     });
   } catch (_) {}
@@ -1513,7 +1555,16 @@
       sync.at = toTs(data.saved.guardada) || Date.now();
       setSync('ok');
     });
-  } else if (!noSave) tagsReady.then(() => saveAll());
+  } else if (!noSave) {
+    // Si la eliminaste de la carpeta, no se vuelve a guardar sola (se avisa y el icono permite guardarla).
+    Promise.all([tagsReady, exclusionReady]).then(([, excluded]) => {
+      if (!excluded) return saveAll();
+      setSync('off', { reason: 'excluded' });
+      const note = $('nosave-note');
+      note.textContent = `No se guarda en tu carpeta: la eliminaste${excluded.at ? ' el ' + new Date(excluded.at).getDate() + ' ' + MON[new Date(excluded.at).getMonth()] : ''}. Pulsa el icono de guardado para volver a guardarla.`;
+      note.hidden = false;
+    });
+  }
   renderSaveStatus();
 
   async function refreshFolder() {
@@ -1596,7 +1647,7 @@
   });
 
   // Ventanas modales (Ayuda y Ajustes): misma animación de entrada y salida.
-  const modals = { help: $('help'), settings: $('settings-modal') };
+  const modals = { help: $('help'), settings: $('settings-modal'), del: $('del-modal') };
   const openModalBox = m => { setOpts(false); m.classList.remove('closing'); m.hidden = false; m.querySelector('.help-close').focus(); };
   const closeModalBox = m => {
     if (m.hidden) return;
@@ -1604,12 +1655,49 @@
     setTimeout(() => { m.hidden = true; m.classList.remove('closing'); optsBtn.focus(); }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 170);
   };
   Object.values(modals).forEach(m => {
-    m.querySelector('.help-close').addEventListener('click', () => closeModalBox(m));
+    m.querySelectorAll('.help-close, [data-close]').forEach(b => b.addEventListener('click', () => closeModalBox(m)));
     m.addEventListener('click', ev => { if (ev.target === m) closeModalBox(m); });
   });
   $('opt-help').addEventListener('click', () => openModalBox(modals.help));
   $('opt-settings').addEventListener('click', () => openModalBox(modals.settings));
   $('opt-folder').addEventListener('click', () => { setOpts(false); chrome.runtime.sendMessage({ type: 'open-folder-view' }); });
+  // «Eliminar de la carpeta»: borra la carpeta de la incidencia (y su rastro en el índice), recuerda que
+  // no hay que volver a guardarla y cierra el visor.
+  $('opt-delete').addEventListener('click', async () => {
+    const folder = saveState.folder || fileSafe(h.number || 'incidencia');
+    $('del-title').textContent = `¿Eliminar ${h.number || 'la incidencia'} de tu carpeta?`;
+    const list = $('del-list');
+    list.textContent = '';
+    openModalBox(modals.del);
+    let r = null;
+    try { r = await chrome.runtime.sendMessage({ type: 'saved-files', folder }); } catch (_) {}
+    if (r && r.ok) {
+      r.names.forEach(n => list.appendChild(el('li', '', n)));
+      if (r.adjuntos) list.appendChild(el('li', '', `adjuntos/ (${r.adjuntos} ${r.adjuntos === 1 ? 'archivo' : 'archivos'})`));
+    } else list.appendChild(el('li', '', `${saveState.folderName || 'carpeta'}/${folder}/`));
+  });
+  $('del-ok').addEventListener('click', async () => {
+    const ok = $('del-ok');
+    ok.disabled = true;
+    try {
+      if (saving) await saving;
+      const r = await chrome.runtime.sendMessage({ type: 'remove-saved', folder: saveState.folder || fileSafe(h.number || 'incidencia') });
+      if (!r || !r.ok) throw new Error((r && (r.error || r.reason)) || 'sin respuesta');
+      await rememberExclusion();
+      chrome.storage.local.remove(tagKey).catch(() => {});
+      announceIndex();
+      closeModalBox(modals.del);
+      // Se cierra: en SmartIT se vuelve a la ficha (sin conservar el visor); en una guardada, a lo anterior.
+      if (backLabel) goBack();
+      else if (embedded) parent.postMessage({ sie: 'viewer-close', discard: true }, '*');
+      else {
+        saveState.savedAt = ''; setSync('off', { reason: 'excluded' });
+        toast('Incidencia eliminada de tu carpeta');
+      }
+    } catch (err) {
+      toast('No se pudo eliminar: ' + (err.message || err), { error: true });
+    } finally { ok.disabled = false; }
+  });
   document.addEventListener('keydown', ev => {
     if (ev.key !== 'Escape') return;
     const open = Object.values(modals).find(m => !m.hidden);

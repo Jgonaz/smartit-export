@@ -19,8 +19,35 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       const h = await SieCarpeta.get();
       if (!h) return { ok: false, reason: 'no-folder' };
       if ((await SieCarpeta.status(h)) !== 'granted') return { ok: false, reason: 'permission' };
+      // El índice se rehace antes, para contar también los cambios que haya hecho el agente.
+      try { await SieCarpeta.rebuildIndex(h); } catch (_) {}
       const items = await SieCarpeta.related(h, msg.current || {});
       return { ok: true, items, total: SieCarpeta.related.total || 0, more: SieCarpeta.related.more || 0 };
+    })().then(sendResponse, () => sendResponse({ ok: false }));
+    return true;
+  }
+  if (msg.type === 'remove-saved') {
+    (async () => {
+      const h = await SieCarpeta.get();
+      if (!h) return { ok: false, reason: 'no-folder' };
+      if ((await SieCarpeta.status(h)) !== 'granted') return { ok: false, reason: 'permission' };
+      const res = await SieCarpeta.remove(h, [msg.folder]);
+      return res.failed.length ? { ok: false, reason: 'error', error: res.failed[0].error } : { ok: true };
+    })().then(sendResponse, err => sendResponse({ ok: false, reason: 'error', error: String(err && err.message || err) }));
+    return true;
+  }
+  if (msg.type === 'saved-files') {
+    (async () => {
+      const h = await SieCarpeta.get();
+      if (!h || (await SieCarpeta.status(h)) !== 'granted') return { ok: false };
+      let dir; try { dir = await h.getDirectoryHandle(SieCarpeta.safe(msg.folder)); } catch (_) { return { ok: false }; }
+      const names = []; let adj = 0;
+      for await (const [name, x] of dir.entries()) {
+        if (x.kind === 'file') names.push(name);
+        else if (name === 'adjuntos') { for await (const [, y] of x.entries()) if (y.kind === 'file') adj++; }
+        else names.push(name + '/');
+      }
+      return { ok: true, names: names.sort(), adjuntos: adj, folderName: h.name };
     })().then(sendResponse, () => sendResponse({ ok: false }));
     return true;
   }

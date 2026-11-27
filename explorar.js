@@ -525,7 +525,7 @@
     const prev = vstack[vstack.length - 1];
     f.classList.remove('on');
     setTimeout(() => f.remove(), 300);
-    if (prev) { prev.inert = false; prev.focus(); return; }
+    if (prev) { prev.inert = false; prev.focus(); try { prev.contentWindow.postMessage({ sie: 'viewer-shown' }, '*'); } catch (_) {} return; }
     // Vuelta al listado: puede haber cambiado alguna etiqueta, así que se relee el índice.
     setTimeout(() => { vwrap.hidden = true; document.body.classList.remove('viewer-open'); }, 300);
     await reloadRows();
@@ -549,6 +549,15 @@
     else if (e.data.sie === 'open-saved' && typeof e.data.folder === 'string') pushViewer(e.data.folder, String(e.data.back || 'Volver'));
   });
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && vstack.length && modal.hidden) { ev.preventDefault(); popViewer(); } });
+  // Si se guarda, etiqueta o elimina una incidencia en otro sitio (un visor en SmartIT, el panel…), el listado se pone al día.
+  let reloadT;
+  try {
+    chrome.storage.onChanged.addListener((ch, area) => {
+      if (area !== 'local' || !ch.indexUpdatedAt) return;
+      clearTimeout(reloadT);
+      reloadT = setTimeout(() => reloadRows(), 300);
+    });
+  } catch (_) {}
 
   // ---------- «Ordenar por»: desplegable propio (mismo estilo que las sugerencias de etiquetas) ----------
   const SORTS = [['guardada', 'Actualizada más reciente'], ['abierta', 'Abierta más reciente'], ['numero', 'Número']];

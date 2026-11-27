@@ -12,7 +12,7 @@ stub = '''<script src="../fixtures/{name}.js"></script>
   // Sustituto de chrome.* para abrir el visor como archivo local.
   const mem = {{ k: window.SIE_FIXTURE }};
   window.chrome = {{
-    storage: {{ local: {{ get: async k => (typeof k === 'string' ? {{ [k]: mem[k] }} : Object.fromEntries(k.map(x => [x, mem[x]]))), set: async o => Object.assign(mem, o) }}, onChanged: {{ addListener() {{}} }} }},
+    storage: {{ local: {{ get: async k => (typeof k === 'string' ? {{ [k]: mem[k] }} : Object.fromEntries(k.map(x => [x, mem[x]]))), set: async o => Object.assign(mem, o), remove: async k => {{ [].concat(k).forEach(x => delete mem[x]); }} }}, onChanged: {{ addListener() {{}} }} }},
     runtime: {{ sendMessage: async () => ({{}}), getURL: p => '../../' + p }}
   }};
   if (!location.hash) location.hash = 'k';
